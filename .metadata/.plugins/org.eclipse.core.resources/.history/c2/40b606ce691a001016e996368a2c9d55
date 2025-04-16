@@ -1,0 +1,331 @@
+package do_an_1;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.io.IOException;
+import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
+public class PanelTimKiem extends JPanel {
+    private JTextField txtTuKhoa;
+    private JComboBox<String> cbLoaiTimKiem;
+    private JTable table;
+    private List<SanPham> dsSanPham;
+    private List<KhachHang> dsKhachHang;
+    private List<HoaDon> dsHoaDon;
+    private DataManager sanPhamDataManager;
+    private DataManager khachHangDataManager;
+    private DataManager hoaDonDataManager;
+
+    private String formatPrice(double price) {
+        DecimalFormat formatter = new DecimalFormat("#,###");
+        return formatter.format(price) + " VND";
+    }
+
+    public PanelTimKiem() {
+        setBackground(Color.decode("#F8EAD9"));
+        setLayout(new BorderLayout());
+        setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        sanPhamDataManager = new FileDataManager();
+        khachHangDataManager = new FileDataManager();
+        hoaDonDataManager = new FileDataManager();
+        dsSanPham = new ArrayList<>();
+        dsKhachHang = new ArrayList<>();
+        dsHoaDon = new ArrayList<>();
+
+        try {
+            dsSanPham = sanPhamDataManager.loadFromFile("sanpham.dat");
+            dsKhachHang = khachHangDataManager.loadFromFile("khachhang.dat");
+            dsHoaDon = hoaDonDataManager.loadFromFile("hoadon.dat");
+        } catch (IOException | ClassNotFoundException e) {
+            JOptionPane.showMessageDialog(this, "Lỗi khi đọc file: " + e.getMessage());
+        }
+
+        // Panel tìm kiếm
+        JPanel searchPanel = new JPanel(new FlowLayout());
+        searchPanel.setBackground(Color.decode("#F8EAD9"));
+        txtTuKhoa = new JTextField(20);
+        cbLoaiTimKiem = new JComboBox<>(new String[]{"Sản phẩm", "Khách hàng", "Hóa đơn"});
+        JButton btnTimKiem = new JButton("Tìm kiếm");
+
+        btnTimKiem.addActionListener(e -> timKiem());
+
+        searchPanel.add(new JLabel("Từ khóa:"));
+        searchPanel.add(txtTuKhoa);
+        searchPanel.add(cbLoaiTimKiem);
+        searchPanel.add(btnTimKiem);
+        add(searchPanel, BorderLayout.NORTH);
+
+        // Bảng kết quả
+        table = new JTable();
+        table.setFillsViewportHeight(true);
+        JScrollPane tableScrollPane = new JScrollPane(table);
+        add(tableScrollPane, BorderLayout.CENTER);
+
+        // Sự kiện nhấn chuột vào bảng
+        table.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                int row = table.rowAtPoint(e.getPoint());
+                if (row != -1) {
+                    String loaiTimKiem = (String) cbLoaiTimKiem.getSelectedItem();
+                    if (loaiTimKiem.equals("Khách hàng")) {
+                        String maKH = (String) table.getValueAt(row, 0);
+                        hienThiLichSuMuaHang(maKH);
+                    } else if (loaiTimKiem.equals("Sản phẩm")) {
+                        String maSP = (String) table.getValueAt(row, 0);
+                        hienThiChiTietSanPham(maSP);
+                    } else if (loaiTimKiem.equals("Hóa đơn")) {
+                        String maHD = (String) table.getValueAt(row, 0);
+                        hienThiChiTietHoaDon(maHD);
+                    }
+                }
+            }
+        });
+
+        timKiem();
+    }
+
+    private void timKiem() {
+        String tuKhoa = txtTuKhoa.getText().trim().toLowerCase();
+        String loaiTimKiem = (String) cbLoaiTimKiem.getSelectedItem();
+
+        if (loaiTimKiem.equals("Sản phẩm")) {
+            String[] columns = {"Mã SP", "Tên", "Hãng", "Giá", "Số lượng"};
+            List<SanPham> ketQua = dsSanPham.stream()
+                    .filter(sp -> sp.getMaSP().toLowerCase().contains(tuKhoa) || sp.getTen().toLowerCase().contains(tuKhoa) || sp.getHang().toLowerCase().contains(tuKhoa))
+                    .collect(Collectors.toList());
+            Object[][] data = new Object[ketQua.size()][5];
+            for (int i = 0; i < ketQua.size(); i++) {
+                SanPham sp = ketQua.get(i);
+                data[i] = new Object[]{sp.getMaSP(), sp.getTen(), sp.getHang(), formatPrice(sp.getGia()), sp.getSoLuong()};
+            }
+            table.setModel(new javax.swing.table.DefaultTableModel(data, columns));
+        } else if (loaiTimKiem.equals("Khách hàng")) {
+            String[] columns = {"Mã KH", "Tên", "Địa chỉ", "Số ĐT"};
+            List<KhachHang> ketQua = dsKhachHang.stream()
+                    .filter(kh -> kh.getMaKH().toLowerCase().contains(tuKhoa) || kh.getTen().toLowerCase().contains(tuKhoa) || kh.getDiaChi().toLowerCase().contains(tuKhoa) || kh.getSoDT().toLowerCase().contains(tuKhoa))
+                    .collect(Collectors.toList());
+            Object[][] data = new Object[ketQua.size()][4];
+            for (int i = 0; i < ketQua.size(); i++) {
+                KhachHang kh = ketQua.get(i);
+                data[i] = new Object[]{kh.getMaKH(), kh.getTen(), kh.getDiaChi(), kh.getSoDT()};
+            }
+            table.setModel(new javax.swing.table.DefaultTableModel(data, columns));
+        } else if (loaiTimKiem.equals("Hóa đơn")) {
+            String[] columns = {"Mã HD", "Mã KH", "Ngày lập"};
+            List<HoaDon> ketQua = dsHoaDon.stream()
+                    .filter(hd -> hd.getMaHD().toLowerCase().contains(tuKhoa) || hd.getMaKH().toLowerCase().contains(tuKhoa))
+                    .collect(Collectors.toList());
+            List<String> uniqueMaHD = ketQua.stream().map(HoaDon::getMaHD).distinct().toList();
+            Object[][] data = new Object[uniqueMaHD.size()][3];
+            for (int i = 0; i < uniqueMaHD.size(); i++) {
+                String maHD = uniqueMaHD.get(i);
+                HoaDon hd = ketQua.stream().filter(h -> h.getMaHD().equals(maHD)).findFirst().orElse(null);
+                if (hd != null) {
+                    data[i] = new Object[]{hd.getMaHD(), hd.getMaKH(), new SimpleDateFormat("dd/MM/yyyy").format(hd.getNgayLap())};
+                }
+            }
+            table.setModel(new javax.swing.table.DefaultTableModel(data, columns));
+        }
+
+        table.revalidate();
+        table.repaint();
+    }
+
+    private void hienThiLichSuMuaHang(String maKH) {
+        List<HoaDon> lichSu = dsHoaDon.stream().filter(hd -> hd.getMaKH().equals(maKH)).toList();
+        JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Lịch sử mua hàng", true);
+        dialog.setLayout(new BorderLayout());
+        dialog.setSize(600, 400);
+        dialog.setLocationRelativeTo(this);
+        dialog.getContentPane().setBackground(Color.decode("#F8EAD9"));
+
+        String[] columns = {"Mã HD", "Mã SP", "Tên SP", "Số lượng", "Ngày lập"};
+        Object[][] data = new Object[lichSu.size()][5];
+        for (int i = 0; i < lichSu.size(); i++) {
+            HoaDon hd = lichSu.get(i);
+            SanPham sp = dsSanPham.stream().filter(s -> s.getMaSP().equals(hd.getTenSP())).findFirst().orElse(null);
+            String tenSP = sp != null ? sp.getTen() : "Không tìm thấy";
+            data[i] = new Object[]{hd.getMaHD(), hd.getTenSP(), tenSP, hd.getSoLuong(), new SimpleDateFormat("dd/MM/yyyy").format(hd.getNgayLap())};
+        }
+        JTable historyTable = new JTable(data, columns);
+        JScrollPane tableScrollPane = new JScrollPane(historyTable);
+        dialog.add(tableScrollPane, BorderLayout.CENTER);
+
+        JButton btnDong = new JButton("Đóng");
+        btnDong.addActionListener(e -> dialog.dispose());
+        JPanel buttonPanel = new JPanel(new FlowLayout());
+        buttonPanel.add(btnDong);
+        buttonPanel.setBackground(Color.decode("#F8EAD9"));
+        dialog.add(buttonPanel, BorderLayout.SOUTH);
+
+        dialog.setVisible(true);
+    }
+
+    private void hienThiChiTietSanPham(String maSP) {
+        SanPham sp = dsSanPham.stream().filter(s -> s.getMaSP().equals(maSP)).findFirst().orElse(null);
+        if (sp == null) return;
+
+        JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Chi tiết sản phẩm", true);
+        dialog.setLayout(new BorderLayout());
+        dialog.setSize(600, 400);
+        dialog.setLocationRelativeTo(this);
+        dialog.getContentPane().setBackground(Color.decode("#F8EAD9"));
+
+        JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        mainPanel.setBackground(Color.decode("#F8EAD9"));
+
+        JPanel imagePanel = new JPanel();
+        imagePanel.setBackground(Color.decode("#F8EAD9"));
+        JLabel lblHinhMinhHoa = new JLabel("");
+        if (sp.getHinhMinhHoa() != null && !sp.getHinhMinhHoa().isEmpty()) {
+            try {
+                ImageIcon icon = new ImageIcon(sp.getHinhMinhHoa());
+                int maxSize = 200;
+                Image image = icon.getImage();
+                int width = image.getWidth(null);
+                int height = image.getHeight(null);
+                double ratio = Math.min((double) maxSize / width, (double) maxSize / height);
+                int newWidth = (int) (width * ratio);
+                int newHeight = (int) (height * ratio);
+                Image scaledImage = image.getScaledInstance(newWidth, newHeight, Image.SCALE_SMOOTH);
+                lblHinhMinhHoa.setIcon(new ImageIcon(scaledImage));
+            } catch (Exception ex) {
+                lblHinhMinhHoa.setText("Lỗi tải hình");
+            }
+        } else {
+            lblHinhMinhHoa.setText("Không có hình");
+        }
+        imagePanel.add(lblHinhMinhHoa);
+        mainPanel.add(imagePanel, BorderLayout.WEST);
+
+        JPanel detailPanel = new JPanel(new GridLayout(10, 2, 5, 5));
+        detailPanel.setBackground(Color.decode("#F8EAD9"));
+        detailPanel.add(new JLabel("Mã SP:"));
+        detailPanel.add(new JLabel(sp.getMaSP()));
+        detailPanel.add(new JLabel("Tên:"));
+        detailPanel.add(new JLabel(sp.getTen()));
+        detailPanel.add(new JLabel("Hãng:"));
+        detailPanel.add(new JLabel(sp.getHang()));
+        detailPanel.add(new JLabel("Giá:"));
+        detailPanel.add(new JLabel(formatPrice(sp.getGia())));
+        detailPanel.add(new JLabel("Số lượng còn lại:"));
+        detailPanel.add(new JLabel(String.valueOf(sp.getSoLuong())));
+        detailPanel.add(new JLabel("Chip:"));
+        detailPanel.add(new JLabel(sp.getChip()));
+        detailPanel.add(new JLabel("Số camera:"));
+        detailPanel.add(new JLabel(String.valueOf(sp.getSoCamera())));
+        detailPanel.add(new JLabel("Dung lượng pin (mAh):"));
+        detailPanel.add(new JLabel(String.valueOf(sp.getDungLuongPin())));
+        detailPanel.add(new JLabel("Kích thước màn hình (inch):"));
+        detailPanel.add(new JLabel(String.valueOf(sp.getKichThuocManHinh())));
+
+        mainPanel.add(detailPanel, BorderLayout.CENTER);
+        dialog.add(mainPanel, BorderLayout.CENTER);
+
+        JButton btnDong = new JButton("Đóng");
+        btnDong.addActionListener(e -> dialog.dispose());
+        JPanel buttonPanel = new JPanel(new FlowLayout());
+        buttonPanel.add(btnDong);
+        buttonPanel.setBackground(Color.decode("#F8EAD9"));
+        dialog.add(buttonPanel, BorderLayout.SOUTH);
+
+        dialog.setVisible(true);
+    }
+
+    private void hienThiChiTietHoaDon(String maHD) {
+        List<HoaDon> hoaDonCungMa = dsHoaDon.stream().filter(hd -> hd.getMaHD().equals(maHD)).toList();
+        if (hoaDonCungMa.isEmpty()) return;
+
+        HoaDon firstHD = hoaDonCungMa.get(0);
+        String maKH = firstHD.getMaKH();
+        KhachHang kh = dsKhachHang.stream().filter(k -> k.getMaKH().equals(maKH)).findFirst().orElse(null);
+        String tenKH = kh != null ? kh.getTen() : "Không tìm thấy";
+        String ngayLap = new SimpleDateFormat("dd/MM/yyyy").format(firstHD.getNgayLap());
+
+        JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Chi tiết hóa đơn", true);
+        dialog.setLayout(new BorderLayout());
+        dialog.setSize(600, 400);
+        dialog.setLocationRelativeTo(this);
+        dialog.getContentPane().setBackground(Color.decode("#F8EAD9"));
+
+        JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        mainPanel.setBackground(Color.decode("#F8EAD9"));
+
+        JPanel infoPanel = new JPanel(new GridLayout(3, 2, 5, 5));
+        infoPanel.setBackground(Color.decode("#F8EAD9"));
+        infoPanel.add(new JLabel("Mã hóa đơn:"));
+        infoPanel.add(new JLabel(maHD));
+        infoPanel.add(new JLabel("Tên khách hàng:"));
+        infoPanel.add(new JLabel(tenKH));
+        infoPanel.add(new JLabel("Ngày lập:"));
+        infoPanel.add(new JLabel(ngayLap));
+        mainPanel.add(infoPanel, BorderLayout.NORTH);
+
+        String[] columns = {"Mã SP", "Tên SP", "Số lượng", "Giá", "Thành tiền"};
+        Object[][] data = new Object[hoaDonCungMa.size()][5];
+        double tongBill = 0;
+        for (int i = 0; i < hoaDonCungMa.size(); i++) {
+            HoaDon hd = hoaDonCungMa.get(i);
+            SanPham sp = dsSanPham.stream().filter(s -> s.getMaSP().equals(hd.getTenSP())).findFirst().orElse(null);
+            String tenSP = sp != null ? sp.getTen() : "Không tìm thấy";
+            double gia = sp != null ? sp.getGia() : 0;
+            double thanhTien = gia * hd.getSoLuong();
+            tongBill += thanhTien;
+            data[i] = new Object[]{hd.getTenSP(), tenSP, hd.getSoLuong(), formatPrice(gia), formatPrice(thanhTien)};
+        }
+        JTable detailTable = new JTable(data, columns);
+        JScrollPane tableScrollPane = new JScrollPane(detailTable);
+        mainPanel.add(tableScrollPane, BorderLayout.CENTER);
+
+        JPanel totalPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        totalPanel.setBackground(Color.decode("#F8EAD9"));
+        totalPanel.add(new JLabel("Tổng bill: " + formatPrice(tongBill)));
+        mainPanel.add(totalPanel, BorderLayout.SOUTH);
+
+        dialog.add(mainPanel, BorderLayout.CENTER);
+
+        JButton btnIn = new JButton("In hóa đơn");
+        btnIn.addActionListener(e -> inHoaDon(maHD, tenKH, ngayLap, hoaDonCungMa, tongBill));
+        JButton btnDong = new JButton("Đóng");
+        btnDong.addActionListener(e -> dialog.dispose());
+        JPanel buttonPanel = new JPanel(new FlowLayout());
+        buttonPanel.add(btnIn);
+        buttonPanel.add(btnDong);
+        buttonPanel.setBackground(Color.decode("#F8EAD9"));
+        dialog.add(buttonPanel, BorderLayout.SOUTH);
+
+        dialog.setVisible(true);
+    }
+
+    private void inHoaDon(String maHD, String tenKH, String ngayLap, List<HoaDon> hoaDonCungMa, double tongBill) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("HÓA ĐƠN BÁN HÀNG\n");
+        sb.append("Mã hóa đơn: ").append(maHD).append("\n");
+        sb.append("Tên khách hàng: ").append(tenKH).append("\n");
+        sb.append("Ngày lập: ").append(ngayLap).append("\n");
+        sb.append("--------------------------------\n");
+        sb.append("Mặt hàng:\n");
+        for (HoaDon hd : hoaDonCungMa) {
+            SanPham sp = dsSanPham.stream().filter(s -> s.getMaSP().equals(hd.getTenSP())).findFirst().orElse(null);
+            String tenSP = sp != null ? sp.getTen() : "Không tìm thấy";
+            double gia = sp != null ? sp.getGia() : 0;
+            double thanhTien = gia * hd.getSoLuong();
+            sb.append(String.format(" - %s (Mã: %s), SL: %d, Giá: %s, Thành tiền: %s\n",
+                    tenSP, hd.getTenSP(), hd.getSoLuong(), formatPrice(gia), formatPrice(thanhTien)));
+        }
+        sb.append("--------------------------------\n");
+        sb.append("Tổng bill: ").append(formatPrice(tongBill)).append("\n");
+
+        JOptionPane.showMessageDialog(this, sb.toString(), "In hóa đơn", JOptionPane.INFORMATION_MESSAGE);
+    }
+}

@@ -1,0 +1,78 @@
+package do_an_1;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.*;
+
+public class GiaoDienChinh extends JFrame {
+    private JPanel sidebar, contentPanel;
+    private CardLayout cardLayout;
+
+    private PanelSanPham panelSanPham;
+    private PanelKhachHang panelKhachHang;
+    private PanelHoaDon panelHoaDon;
+    private PanelTimKiem panelTimKiem;
+    private PanelThongKe panelThongKe;
+
+    public GiaoDienChinh() {
+        setTitle("Quản Lý Cửa Hàng Điện Thoại");
+        setSize(1000, 600);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLocationRelativeTo(null);
+        setLayout(new BorderLayout());
+
+        // Sidebar menu
+        sidebar = new JPanel();
+        sidebar.setLayout(new GridLayout(6, 1));
+        sidebar.setBackground(new Color(52, 73, 94));
+
+        String[] buttons = {"Sản Phẩm", "Khách Hàng", "Hóa Đơn", "Tìm Kiếm", "Thống Kê", "Thoát"};
+
+        for (String name : buttons) {
+            JButton btn = new JButton(name);
+            btn.setFocusPainted(false);
+            btn.setBackground(new Color(41, 128, 185));
+            btn.setForeground(Color.WHITE);
+            btn.setFont(new Font("SansSerif", Font.BOLD, 16));
+            btn.addActionListener(e -> switchPanel(name));
+            sidebar.add(btn);
+        }
+
+        add(sidebar, BorderLayout.WEST);
+
+        // Content panel with CardLayout
+        cardLayout = new CardLayout();
+        contentPanel = new JPanel(cardLayout);
+
+        panelSanPham = new PanelSanPham();
+        panelKhachHang = new PanelKhachHang();
+        panelHoaDon = new PanelHoaDon();
+        panelTimKiem = new PanelTimKiem();
+        panelThongKe = new PanelThongKe();
+
+        contentPanel.add(panelSanPham, "Sản Phẩm");
+        contentPanel.add(panelKhachHang, "Khách Hàng");
+        contentPanel.add(panelHoaDon, "Hóa Đơn");
+        contentPanel.add(panelTimKiem, "Tìm Kiếm");
+        contentPanel.add(panelThongKe, "Thống Kê");
+
+        add(contentPanel, BorderLayout.CENTER);
+    }
+
+    private void switchPanel(String name) {
+        if (name.equals("Thoát")) {
+            int result = JOptionPane.showConfirmDialog(this, "Bạn có chắc muốn thoát?", "Xác nhận", JOptionPane.YES_NO_OPTION);
+            if (result == JOptionPane.YES_OPTION) {
+                System.exit(0);
+            }
+        } else {
+            cardLayout.show(contentPanel, name);
+        }
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> {
+            new GiaoDienChinh().setVisible(true);
+        });
+    }
+}

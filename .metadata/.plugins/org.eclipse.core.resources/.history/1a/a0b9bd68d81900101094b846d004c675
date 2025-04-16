@@ -1,0 +1,43 @@
+package do_an_1;
+
+import javax.swing.*;
+import java.awt.*;
+
+public class GiaoDienChinh extends JFrame {
+    private JPanel mainPanel;
+
+    public GiaoDienChinh() {
+        setTitle("Quản Lý Cửa Hàng Điện Thoại");
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setSize(800, 600);
+        setLocationRelativeTo(null);
+
+        mainPanel = new JPanel(new BorderLayout());
+        add(mainPanel);
+
+        // Hiển thị giao diện ban đầu
+        showWelcomePanel();
+    }
+
+    private void showWelcomePanel() {
+        mainPanel.removeAll();
+        WelcomePanel welcomePanel = new WelcomePanel(this::showMainPanel);
+        mainPanel.add(welcomePanel, BorderLayout.CENTER);
+        mainPanel.revalidate();
+        mainPanel.repaint();
+    }
+
+    private void showMainPanel() {
+        mainPanel.removeAll();
+        PanelSanPham panelSanPham = new PanelSanPham();
+        mainPanel.add(panelSanPham, BorderLayout.CENTER);
+        mainPanel.revalidate();
+        mainPanel.repaint();
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> {
+            new GiaoDienChinh().setVisible(true);
+        });
+    }
+}

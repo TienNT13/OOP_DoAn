@@ -1,0 +1,114 @@
+package do_an_1;
+
+import javax.swing.*;
+import java.awt.*;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+public class PanelKhachHang extends JPanel {
+    private List<KhachHang> dsKhachHang;
+    private JTable table;
+    private JTextField txtMaKH, txtTenKH, txtSdt;
+    private DataManager<KhachHang> dataManager;
+
+    public PanelKhachHang() {
+        dataManager = new FileDataManager<>();
+        dsKhachHang = new ArrayList<>();
+        try {
+            dsKhachHang = dataManager.loadFromFile("khachhang.dat");
+        } catch (IOException | ClassNotFoundException e) {
+            JOptionPane.showMessageDialog(this, "Lỗi khi đọc file khách hàng: " + e.getMessage());
+        }
+
+        setLayout(new BorderLayout());
+        setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        // Bảng hiển thị khách hàng
+        String[] columns = {"Mã KH", "Tên KH", "SĐT"};
+        Object[][] data = new Object[dsKhachHang.size()][3];
+        for (int i = 0; i < dsKhachHang.size(); i++) {
+            KhachHang kh = dsKhachHang.get(i);
+            data[i] = new Object[]{kh.getMaKH(), kh.getTenKH(), kh.getSdt()};
+        }
+        table = new JTable(data, columns);
+        add(new JScrollPane(table), BorderLayout.CENTER);
+
+        // Form nhập liệu
+        JPanel formPanel = new JPanel(new GridLayout(4, 2, 5, 5));
+        formPanel.add(new JLabel("Mã KH:"));
+        txtMaKH = new JTextField();
+        formPanel.add(txtMaKH);
+        formPanel.add(new JLabel("Tên KH:"));
+        txtTenKH = new JTextField();
+        formPanel.add(txtTenKH);
+        formPanel.add(new JLabel("SĐT:"));
+        txtSdt = new JTextField();
+        formPanel.add(txtSdt);
+
+        JButton btnThem = new JButton("Thêm");
+        btnThem.addActionListener(e -> themKhachHang());
+        formPanel.add(btnThem);
+
+        JButton btnSua = new JButton("Sửa");
+        btnSua.addActionListener(e -> suaKhachHang());
+        formPanel.add(btnSua);
+
+        add(formPanel, BorderLayout.NORTH);
+    }
+
+    private void themKhachHang() {
+        try {
+            String maKH = txtMaKH.getText();
+            String tenKH = txtTenKH.getText();
+            String sdt = txtSdt.getText();
+
+            if (maKH.isEmpty() || tenKH.isEmpty() || sdt.isEmpty()) {
+                throw new IllegalArgumentException("Vui lòng điền đầy đủ thông tin!");
+            }
+
+            KhachHang kh = new KhachHang(maKH, tenKH, sdt);
+            dsKhachHang.add(kh);
+            dataManager.saveToFile(dsKhachHang, "khachhang.dat");
+            refreshTable();
+            JOptionPane.showMessageDialog(this, "Thêm khách hàng thành công!");
+        } catch (IllegalArgumentException | IOException e) {
+            JOptionPane.showMessageDialog(this, e.getMessage());
+        }
+    }
+
+    private void suaKhachHang() {
+        int row = table.getSelectedRow();
+        if (row == -1) {
+            JOptionPane.showMessageDialog(this, "Vui lòng chọn khách hàng để sửa!");
+            return;
+        }
+
+        try {
+            String maKH = txtMaKH.getText();
+            String tenKH = txtTenKH.getText();
+            String sdt = txtSdt.getText();
+
+            KhachHang kh = dsKhachHang.get(row);
+            kh.setMaKH(maKH);
+            kh.setTenKH(tenKH);
+            kh.setSdt(sdt);
+
+            dataManager.saveToFile(dsKhachHang, "khachhang.dat");
+            refreshTable();
+            JOptionPane.showMessageDialog(this, "Sửa khách hàng thành công!");
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(this, "Lỗi khi lưu file: " + e.getMessage());
+        }
+    }
+
+    private void refreshTable() {
+        String[] columns = {"Mã KH", "Tên KH", "SĐT"};
+        Object[][] data = new Object[dsKhachHang.size()][3];
+        for (int i = 0; i < dsKhachHang.size(); i++) {
+            KhachHang kh = dsKhachHang.get(i);
+            data[i] = new Object[]{kh.getMaKH(), kh.getTenKH(), kh.getSdt()};
+        }
+        table.setModel(new javax.swing.table.DefaultTableModel(data, columns));
+    }
+}

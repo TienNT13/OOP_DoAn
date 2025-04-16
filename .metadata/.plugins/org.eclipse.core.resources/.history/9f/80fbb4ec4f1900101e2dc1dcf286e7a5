@@ -1,0 +1,29 @@
+package do_an_1;
+
+import java.io.Serializable;
+
+public class SanPham implements Serializable {
+    private String ten, hang, thongSo;
+    private double gia;
+    private int soLuong;
+
+    public SanPham(String ten, String hang, double gia, int soLuong, String thongSo) {
+        this.ten = ten;
+        this.hang = hang;
+        this.gia = gia;
+        this.soLuong = soLuong;
+        this.thongSo = thongSo;
+    }
+
+    public String getTen() { return ten; }
+    public String getHang() { return hang; }
+    public double getGia() { return gia; }
+    public int getSoLuong() { return soLuong; }
+    public String getThongSo() { return thongSo; }
+
+    public void setTen(String ten) { this.ten = ten; }
+    public void setHang(String hang) { this.hang = hang; }
+    public void setGia(double gia) { this.gia = gia; }
+    public void setSoLuong(int soLuong) { this.soLuong = soLuong; }
+    public void setThongSo(String thongSo) { this.thongSo = thongSo; }
+}

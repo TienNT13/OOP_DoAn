@@ -1,0 +1,113 @@
+package do_an_1;
+
+import javax.swing.*;
+import java.awt.*;
+import java.util.ArrayList;
+import java.util.List;
+
+public class PanelTimKiem extends JPanel {
+    private JTextField txtTimKiem;
+    private JButton btnTimKiem;
+    private JComboBox<String> cbLoaiTimKiem;
+    private JTable table;
+    private DefaultTableModel tableModel;
+    private List<SanPham> dsSanPham;
+    private List<KhachHang> dsKhachHang;
+    private List<HoaDon> dsHoaDon;
+    private DataManager<SanPham> spDataManager;
+    private DataManager<KhachHang> khDataManager;
+    private DataManager<HoaDon> hdDataManager;
+
+    public PanelTimKiem() {
+        setLayout(new BorderLayout());
+        setBackground(Color.decode("#F8EAD9")); // Set background color
+
+        spDataManager = new FileDataManager<>();
+        khDataManager = new FileDataManager<>();
+        hdDataManager = new FileDataManager<>();
+        dsSanPham = new ArrayList<>();
+        dsKhachHang = new ArrayList<>();
+        dsHoaDon = new ArrayList<>();
+
+        try {
+            dsSanPham = spDataManager.loadFromFile("sanpham.dat");
+            dsKhachHang = khDataManager.loadFromFile("khachhang.dat");
+            dsHoaDon = hdDataManager.loadFromFile("hoadon.dat");
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Lỗi khi đọc file: " + e.getMessage());
+        }
+
+        JPanel topPanel = new JPanel();
+        topPanel.setOpaque(false); // Transparent to show panel's background
+        txtTimKiem = new JTextField(20);
+        btnTimKiem = new JButton("Tìm kiếm");
+        cbLoaiTimKiem = new JComboBox<>(new String[]{"Sản phẩm", "Khách hàng", "Hóa đơn"});
+
+        topPanel.add(new JLabel("Tìm kiếm:"));
+        topPanel.add(txtTimKiem);
+        topPanel.add(cbLoaiTimKiem);
+        topPanel.add(btnTimKiem);
+
+        tableModel = new DefaultTableModel();
+        table = new JTable(tableModel);
+        JScrollPane scrollPane = new JScrollPane(table);
+
+        add(topPanel, BorderLayout.NORTH);
+        add(scrollPane, BorderLayout.CENTER);
+
+        btnTimKiem.addActionListener(e -> timKiem());
+        cbLoaiTimKiem.addActionListener(e -> capNhatBang());
+        capNhatBang();
+    }
+
+    private void capNhatBang() {
+        String loaiTimKiem = (String) cbLoaiTimKiem.getSelectedItem();
+        tableModel.setRowCount(0);
+
+        if ("Sản phẩm".equals(loaiTimKiem)) {
+            tableModel.setColumnIdentifiers(new String[]{"Mã SP", "Tên SP", "Hãng", "Giá", "Số lượng"});
+            for (SanPham sp : dsSanPham) {
+                tableModel.addRow(new Object[]{sp.getMaSP(), sp.getTenSP(), sp.getHang(), sp.getGia(), sp.getSoLuong()});
+            }
+        } else if ("Khách hàng".equals(loaiTimKiem)) {
+            tableModel.setColumnIdentifiers(new String[]{"Mã KH", "Họ tên", "SĐT"});
+            for (KhachHang kh : dsKhachHang) {
+                tableModel.addRow(new Object[]{kh.getMaKH(), kh.getHoTen(), kh.getSdt()});
+            }
+        } else if ("Hóa đơn".equals(loaiTimKiem)) {
+            tableModel.setColumnIdentifiers(new String[]{"Mã HĐ", "Mã KH", "Ngày lập", "Tổng tiền"});
+            for (HoaDon hd : dsHoaDon) {
+                tableModel.addRow(new Object[]{hd.getMaHD(), hd.getMaKH(), hd.getNgayLap(), hd.getTongTien()});
+            }
+        }
+    }
+
+    private void timKiem() {
+        String tuKhoa = txtTimKiem.getText().toLowerCase();
+        String loaiTimKiem = (String) cbLoaiTimKiem.getSelectedItem();
+        tableModel.setRowCount(0);
+
+        if ("Sản phẩm".equals(loaiTimKiem)) {
+            tableModel.setColumnIdentifiers(new String[]{"Mã SP", "Tên SP", "Hãng", "Giá", "Số lượng"});
+            for (SanPham sp : dsSanPham) {
+                if (sp.getMaSP().toLowerCase().contains(tuKhoa) || sp.getTenSP().toLowerCase().contains(tuKhoa) || sp.getHang().toLowerCase().contains(tuKhoa)) {
+                    tableModel.addRow(new Object[]{sp.getMaSP(), sp.getTenSP(), sp.getHang(), sp.getGia(), sp.getSoLuong()});
+                }
+            }
+        } else if ("Khách hàng".equals(loaiTimKiem)) {
+            tableModel.setColumnIdentifiers(new String[]{"Mã KH", "Họ tên", "SĐT"});
+            for (KhachHang kh : dsKhachHang) {
+                if (kh.getMaKH().toLowerCase().contains(tuKhoa) || kh.getHoTen().toLowerCase().contains(tuKhoa) || kh.getSdt().toLowerCase().contains(tuKhoa)) {
+                    tableModel.addRow(new Object[]{kh.getMaKH(), kh.getHoTen(), kh.getSdt()});
+                }
+            }
+        } else if ("Hóa đơn".equals(loaiTimKiem)) {
+            tableModel.setColumnIdentifiers(new String[]{"Mã HĐ", "Mã KH", "Ngày lập", "Tổng tiền"});
+            for (HoaDon hd : dsHoaDon) {
+                if (hd.getMaHD().toLowerCase().contains(tuKhoa) || hd.getMaKH().toLowerCase().contains(tuKhoa)) {
+                    tableModel.addRow(new Object[]{hd.getMaHD(), hd.getMaKH(), hd.getNgayLap(), hd.getTongTien()});
+                }
+            }
+        }
+    }
+}

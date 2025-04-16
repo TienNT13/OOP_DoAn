@@ -1,0 +1,486 @@
+package do_an_1;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.io.IOException;
+import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+public class PanelHoaDon extends JPanel {
+    private List<HoaDon> dsHoaDon;
+    private List<SanPham> dsSanPham;
+    private List<KhachHang> dsKhachHang;
+    private JTable table;
+    private JTextField txtMaHD, txtMaKH, txtNgayLap;
+    private JPanel formPanel;
+    private DataManager dataManager;
+    private DataManager sanPhamDataManager;
+    private DataManager khachHangDataManager;
+    private List<String> danhSachSanPham;
+    private List<Integer> danhSachSoLuong;
+    private boolean isEditing = false;
+
+    private String formatPrice(double price) {
+        DecimalFormat formatter = new DecimalFormat("#,###");
+        return formatter.format(price) + " VND";
+    }
+
+    public PanelHoaDon() {
+        setBackground(Color.decode("#F8EAD9"));
+        setLayout(new BorderLayout());
+        setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        dataManager = new FileDataManager();
+        sanPhamDataManager = new FileDataManager();
+        khachHangDataManager = new FileDataManager();
+        dsHoaDon = new ArrayList<>();
+        dsSanPham = new ArrayList<>();
+        dsKhachHang = new ArrayList<>();
+        danhSachSanPham = new ArrayList<>();
+        danhSachSoLuong = new ArrayList<>();
+
+        try {
+            dsHoaDon = dataManager.loadFromFile("hoadon.dat");
+            dsSanPham = sanPhamDataManager.loadFromFile("sanpham.dat");
+            dsKhachHang = khachHangDataManager.loadFromFile("khachhang.dat");
+        } catch (IOException | ClassNotFoundException e) {
+            JOptionPane.showMessageDialog(this, "Lỗi khi đọc file: " + e.getMessage());
+        }
+
+        // Nút điều khiển
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JButton btnShowForm = new JButton("Thêm hóa đơn");
+        JButton btnSua = new JButton("Sửa hóa đơn");
+        JButton btnXoa = new JButton("Xóa hóa đơn");
+
+        btnShowForm.addActionListener(e -> {
+            formPanel.setVisible(true);
+            clearForm();
+            danhSachSanPham.clear();
+            danhSachSoLuong.clear();
+            isEditing = false;
+        });
+        btnSua.addActionListener(e -> chuanBiSuaHoaDon());
+        btnXoa.addActionListener(e -> xoaHoaDon());
+
+        buttonPanel.add(btnShowForm);
+        buttonPanel.add(btnSua);
+        buttonPanel.add(btnXoa);
+        add(buttonPanel, BorderLayout.NORTH);
+
+        // Bảng hiển thị hóa đơn
+        String[] columns = {"Mã HD", "Mã KH", "Ngày lập"};
+        Object[][] data = new Object[dsHoaDon.size()][3];
+        for (int i = 0; i < dsHoaDon.size(); i++) {
+            HoaDon hd = dsHoaDon.get(i);
+            data[i] = new Object[]{hd.getMaHD(), hd.getMaKH(), new SimpleDateFormat("dd/MM/yyyy").format(hd.getNgayLap())};
+        }
+        table = new JTable(data, columns);
+        table.setFillsViewportHeight(true);
+        JScrollPane tableScrollPane = new JScrollPane(table);
+        add(tableScrollPane, BorderLayout.CENTER);
+
+        // Form nhập liệu
+        formPanel = new JPanel(new BorderLayout());
+        JPanel inputPanel = new JPanel(new GridLayout(4, 2, 5, 5));
+        inputPanel.add(new JLabel("Mã HD:"));
+        txtMaHD = new JTextField();
+        inputPanel.add(txtMaHD);
+        inputPanel.add(new JLabel("Mã KH:"));
+        txtMaKH = new JTextField();
+        inputPanel.add(txtMaKH);
+        inputPanel.add(new JLabel("Ngày lập (dd/MM/yyyy):"));
+        txtNgayLap = new JTextField(new SimpleDateFormat("dd/MM/yyyy").format(new Date()));
+        inputPanel.add(txtNgayLap);
+
+        // Panel cho danh sách sản phẩm
+        JPanel spPanel = new JPanel(new BorderLayout());
+        JTextArea taSanPham = new JTextArea(5, 20);
+        taSanPham.setEditable(false);
+        JScrollPane spScrollPane = new JScrollPane(taSanPham);
+        spPanel.add(spScrollPane, BorderLayout.CENTER);
+
+        JPanel spButtonPanel = new JPanel(new FlowLayout());
+        JButton btnThemSP = new JButton("Thêm sản phẩm");
+        btnThemSP.addActionListener(e -> themSanPhamVaoHoaDon(taSanPham));
+        spButtonPanel.add(btnThemSP);
+        spPanel.add(spButtonPanel, BorderLayout.SOUTH);
+
+        formPanel.add(inputPanel, BorderLayout.NORTH);
+        formPanel.add(spPanel, BorderLayout.CENTER);
+
+        JPanel formButtonPanel = new JPanel(new FlowLayout());
+        JButton btnThem = new JButton("Xác nhận");
+        JButton btnHuy = new JButton("Hủy");
+
+        btnThem.addActionListener(e -> {
+            if (isEditing) {
+                suaHoaDon();
+            } else {
+                themHoaDon();
+            }
+        });
+        btnHuy.addActionListener(e -> {
+            formPanel.setVisible(false);
+            clearForm();
+            danhSachSanPham.clear();
+            danhSachSoLuong.clear();
+            isEditing = false;
+        });
+
+        formButtonPanel.add(btnThem);
+        formButtonPanel.add(btnHuy);
+        formPanel.add(formButtonPanel, BorderLayout.SOUTH);
+
+        add(formPanel, BorderLayout.WEST);
+        formPanel.setVisible(false);
+
+        // Sự kiện nhấn chuột vào bảng
+        table.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                int row = table.rowAtPoint(e.getPoint());
+                if (row != -1) {
+                    hienThiChiTietHoaDon(row);
+                }
+            }
+        });
+
+        refreshTable();
+    }
+
+    private void themSanPhamVaoHoaDon(JTextArea taSanPham) {
+        String maSP = JOptionPane.showInputDialog(this, "Nhập mã sản phẩm:");
+        if (maSP == null || maSP.trim().isEmpty()) return;
+
+        SanPham sp = dsSanPham.stream().filter(s -> s.getMaSP().equals(maSP)).findFirst().orElse(null);
+        if (sp == null) {
+            JOptionPane.showMessageDialog(this, "Sản phẩm không tồn tại!");
+            return;
+        }
+
+        String soLuongStr = JOptionPane.showInputDialog(this, "Nhập số lượng:");
+        int soLuong;
+        try {
+            soLuong = Integer.parseInt(soLuongStr);
+            if (soLuong <= 0 || soLuong > sp.getSoLuong()) {
+                JOptionPane.showMessageDialog(this, "Số lượng không hợp lệ hoặc vượt quá tồn kho!");
+                return;
+            }
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "Số lượng phải là số nguyên!");
+            return;
+        }
+
+        danhSachSanPham.add(maSP);
+        danhSachSoLuong.add(soLuong);
+        updateSanPhamTextArea(taSanPham);
+    }
+
+    private void updateSanPhamTextArea(JTextArea taSanPham) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < danhSachSanPham.size(); i++) {
+            String maSP = danhSachSanPham.get(i);
+            int soLuong = danhSachSoLuong.get(i);
+            SanPham sp = dsSanPham.stream().filter(s -> s.getMaSP().equals(maSP)).findFirst().orElse(null);
+            if (sp != null) {
+                sb.append(String.format("Mã SP: %s, Tên: %s, Số lượng: %d\n", maSP, sp.getTen(), soLuong));
+            }
+        }
+        taSanPham.setText(sb.toString());
+    }
+
+    private void themHoaDon() {
+        try {
+            String maHD = txtMaHD.getText();
+            String maKH = txtMaKH.getText();
+            String ngayLapStr = txtNgayLap.getText();
+            SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
+            Date ngayLap = sdf.parse(ngayLapStr);
+
+            if (maHD.isEmpty() || maKH.isEmpty() || ngayLapStr.isEmpty()) {
+                throw new IllegalArgumentException("Vui lòng điền đầy đủ thông tin!");
+            }
+
+            if (dsHoaDon.stream().anyMatch(hd -> hd.getMaHD().equals(maHD))) {
+                throw new IllegalArgumentException("Mã hóa đơn đã tồn tại!");
+            }
+
+            if (dsKhachHang.stream().noneMatch(kh -> kh.getMaKH().equals(maKH))) {
+                throw new IllegalArgumentException("Mã khách hàng không tồn tại!");
+            }
+
+            if (danhSachSanPham.isEmpty()) {
+                throw new IllegalArgumentException("Hóa đơn phải có ít nhất một sản phẩm!");
+            }
+
+            for (int i = 0; i < danhSachSanPham.size(); i++) {
+                String maSP = danhSachSanPham.get(i);
+                int soLuong = danhSachSoLuong.get(i);
+                SanPham sp = dsSanPham.stream().filter(s -> s.getMaSP().equals(maSP)).findFirst().orElse(null);
+                if (sp != null) {
+                    sp.setSoLuong(sp.getSoLuong() - soLuong);
+                }
+                HoaDon hd = new HoaDon(maHD, maKH, maSP, soLuong, ngayLap);
+                dsHoaDon.add(hd);
+            }
+
+            dataManager.saveToFile(dsHoaDon, "hoadon.dat");
+            sanPhamDataManager.saveToFile(dsSanPham, "sanpham.dat");
+            refreshTable();
+            formPanel.setVisible(false);
+            clearForm();
+            danhSachSanPham.clear();
+            danhSachSoLuong.clear();
+            JOptionPane.showMessageDialog(this, "Thêm hóa đơn thành công!");
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Lỗi: " + e.getMessage());
+        }
+    }
+
+    private void chuanBiSuaHoaDon() {
+        int row = table.getSelectedRow();
+        if (row == -1) {
+            JOptionPane.showMessageDialog(this, "Vui lòng chọn hóa đơn để sửa!");
+            return;
+        }
+
+        danhSachSanPham.clear();
+        danhSachSoLuong.clear();
+        HoaDon hd = dsHoaDon.get(row);
+        txtMaHD.setText(hd.getMaHD());
+        txtMaKH.setText(hd.getMaKH());
+        txtNgayLap.setText(new SimpleDateFormat("dd/MM/yyyy").format(hd.getNgayLap()));
+
+        // Lấy danh sách sản phẩm của hóa đơn
+        for (HoaDon h : dsHoaDon) {
+            if (h.getMaHD().equals(hd.getMaHD())) {
+                danhSachSanPham.add(h.getTenSP());
+                danhSachSoLuong.add(h.getSoLuong());
+            }
+        }
+
+        JTextArea taSanPham = (JTextArea) ((JScrollPane) ((JPanel) formPanel.getComponent(0)).getComponent(1)).getViewport().getView();
+        updateSanPhamTextArea(taSanPham);
+        formPanel.setVisible(true);
+        isEditing = true;
+    }
+
+    private void suaHoaDon() {
+        int row = table.getSelectedRow();
+        if (row == -1) {
+            JOptionPane.showMessageDialog(this, "Vui lòng chọn hóa đơn để sửa!");
+            return;
+        }
+
+        try {
+            String maHD = txtMaHD.getText();
+            String maKH = txtMaKH.getText();
+            String ngayLapStr = txtNgayLap.getText();
+            SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
+            Date ngayLap = sdf.parse(ngayLapStr);
+
+            if (maHD.isEmpty() || maKH.isEmpty() || ngayLapStr.isEmpty()) {
+                throw new IllegalArgumentException("Vui lòng điền đầy đủ thông tin!");
+            }
+
+            if (dsKhachHang.stream().noneMatch(kh -> kh.getMaKH().equals(maKH))) {
+                throw new IllegalArgumentException("Mã khách hàng không tồn tại!");
+            }
+
+            if (danhSachSanPham.isEmpty()) {
+                throw new IllegalArgumentException("Hóa đơn phải có ít nhất một sản phẩm!");
+            }
+
+            // Khôi phục số lượng sản phẩm cũ
+            String oldMaHD = dsHoaDon.get(row).getMaHD();
+            for (HoaDon hd : dsHoaDon) {
+                if (hd.getMaHD().equals(oldMaHD)) {
+                    SanPham sp = dsSanPham.stream().filter(s -> s.getMaSP().equals(hd.getTenSP())).findFirst().orElse(null);
+                    if (sp != null) {
+                        sp.setSoLuong(sp.getSoLuong() + hd.getSoLuong());
+                    }
+                }
+            }
+
+            // Xóa hóa đơn cũ
+            dsHoaDon.removeIf(hd -> hd.getMaHD().equals(oldMaHD));
+
+            // Thêm hóa đơn mới
+            for (int i = 0; i < danhSachSanPham.size(); i++) {
+                String maSP = danhSachSanPham.get(i);
+                int soLuong = danhSachSoLuong.get(i);
+                SanPham sp = dsSanPham.stream().filter(s -> s.getMaSP().equals(maSP)).findFirst().orElse(null);
+                if (sp == null || soLuong > sp.getSoLuong()) {
+                    throw new IllegalArgumentException("Sản phẩm không tồn tại hoặc số lượng vượt quá tồn kho!");
+                }
+                sp.setSoLuong(sp.getSoLuong() - soLuong);
+                HoaDon hd = new HoaDon(maHD, maKH, maSP, soLuong, ngayLap);
+                dsHoaDon.add(hd);
+            }
+
+            dataManager.saveToFile(dsHoaDon, "hoadon.dat");
+            sanPhamDataManager.saveToFile(dsSanPham, "sanpham.dat");
+            refreshTable();
+            formPanel.setVisible(false);
+            clearForm();
+            danhSachSanPham.clear();
+            danhSachSoLuong.clear();
+            isEditing = false;
+            JOptionPane.showMessageDialog(this, "Sửa hóa đơn thành công!");
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Lỗi: " + e.getMessage());
+        }
+    }
+
+    private void xoaHoaDon() {
+        int row = table.getSelectedRow();
+        if (row == -1) {
+            JOptionPane.showMessageDialog(this, "Vui lòng chọn hóa đơn để xóa!");
+            return;
+        }
+
+        int confirm = JOptionPane.showConfirmDialog(this, "Bạn có chắc muốn xóa hóa đơn này?", "Xác nhận xóa", JOptionPane.YES_NO_OPTION);
+        if (confirm == JOptionPane.YES_OPTION) {
+            try {
+                String maHD = dsHoaDon.get(row).getMaHD();
+                // Khôi phục số lượng sản phẩm
+                for (HoaDon hd : dsHoaDon) {
+                    if (hd.getMaHD().equals(maHD)) {
+                        SanPham sp = dsSanPham.stream().filter(s -> s.getMaSP().equals(hd.getTenSP())).findFirst().orElse(null);
+                        if (sp != null) {
+                            sp.setSoLuong(sp.getSoLuong() + hd.getSoLuong());
+                        }
+                    }
+                }
+                dsHoaDon.removeIf(hd -> hd.getMaHD().equals(maHD));
+                dataManager.saveToFile(dsHoaDon, "hoadon.dat");
+                sanPhamDataManager.saveToFile(dsSanPham, "sanpham.dat");
+                refreshTable();
+                formPanel.setVisible(false);
+                clearForm();
+                JOptionPane.showMessageDialog(this, "Xóa hóa đơn thành công!");
+            } catch (IOException e) {
+                JOptionPane.showMessageDialog(this, "Lỗi khi lưu file: " + e.getMessage());
+            }
+        }
+    }
+
+    private void hienThiChiTietHoaDon(int row) {
+        String maHD = dsHoaDon.get(row).getMaHD();
+        List<HoaDon> hoaDonCungMa = dsHoaDon.stream().filter(hd -> hd.getMaHD().equals(maHD)).toList();
+        if (hoaDonCungMa.isEmpty()) return;
+
+        HoaDon firstHD = hoaDonCungMa.get(0);
+        String maKH = firstHD.getMaKH();
+        KhachHang kh = dsKhachHang.stream().filter(k -> k.getMaKH().equals(maKH)).findFirst().orElse(null);
+        String tenKH = kh != null ? kh.getTen() : "Không tìm thấy";
+        String ngayLap = new SimpleDateFormat("dd/MM/yyyy").format(firstHD.getNgayLap());
+
+        JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Chi tiết hóa đơn", true);
+        dialog.setLayout(new BorderLayout());
+        dialog.setSize(600, 400);
+        dialog.setLocationRelativeTo(this);
+        dialog.getContentPane().setBackground(Color.decode("#F8EAD9"));
+
+        JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        mainPanel.setBackground(Color.decode("#F8EAD9"));
+
+        JPanel infoPanel = new JPanel(new GridLayout(3, 2, 5, 5));
+        infoPanel.setBackground(Color.decode("#F8EAD9"));
+        infoPanel.add(new JLabel("Mã hóa đơn:"));
+        infoPanel.add(new JLabel(maHD));
+        infoPanel.add(new JLabel("Tên khách hàng:"));
+        infoPanel.add(new JLabel(tenKH));
+        infoPanel.add(new JLabel("Ngày lập:"));
+        infoPanel.add(new JLabel(ngayLap));
+        mainPanel.add(infoPanel, BorderLayout.NORTH);
+
+        String[] columns = {"Mã SP", "Tên SP", "Số lượng", "Giá", "Thành tiền"};
+        Object[][] data = new Object[hoaDonCungMa.size()][5];
+        double tongBill = 0;
+        for (int i = 0; i < hoaDonCungMa.size(); i++) {
+            HoaDon hd = hoaDonCungMa.get(i);
+            SanPham sp = dsSanPham.stream().filter(s -> s.getMaSP().equals(hd.getTenSP())).findFirst().orElse(null);
+            String tenSP = sp != null ? sp.getTen() : "Không tìm thấy";
+            double gia = sp != null ? sp.getGia() : 0;
+            double thanhTien = gia * hd.getSoLuong();
+            tongBill += thanhTien;
+            data[i] = new Object[]{hd.getTenSP(), tenSP, hd.getSoLuong(), formatPrice(gia), formatPrice(thanhTien)};
+        }
+        JTable detailTable = new JTable(data, columns);
+        JScrollPane tableScrollPane = new JScrollPane(detailTable);
+        mainPanel.add(tableScrollPane, BorderLayout.CENTER);
+
+        JPanel totalPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        totalPanel.setBackground(Color.decode("#F8EAD9"));
+        totalPanel.add(new JLabel("Tổng bill: " + formatPrice(tongBill)));
+        mainPanel.add(totalPanel, BorderLayout.SOUTH);
+
+        dialog.add(mainPanel, BorderLayout.CENTER);
+
+        JButton btnIn = new JButton("In hóa đơn");
+        btnIn.addActionListener(e -> inHoaDon(maHD, tenKH, ngayLap, hoaDonCungMa, tongBill));
+        JButton btnDong = new JButton("Đóng");
+        btnDong.addActionListener(e -> dialog.dispose());
+        JPanel buttonPanel = new JPanel(new FlowLayout());
+        buttonPanel.add(btnIn);
+        buttonPanel.add(btnDong);
+        buttonPanel.setBackground(Color.decode("#F8EAD9"));
+        dialog.add(buttonPanel, BorderLayout.SOUTH);
+
+        dialog.setVisible(true);
+    }
+
+    private void inHoaDon(String maHD, String tenKH, String ngayLap, List<HoaDon> hoaDonCungMa, double tongBill) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("HÓA ĐƠN BÁN HÀNG\n");
+        sb.append("Mã hóa đơn: ").append(maHD).append("\n");
+        sb.append("Tên khách hàng: ").append(tenKH).append("\n");
+        sb.append("Ngày lập: ").append(ngayLap).append("\n");
+        sb.append("--------------------------------\n");
+        sb.append("Mặt hàng:\n");
+        for (HoaDon hd : hoaDonCungMa) {
+            SanPham sp = dsSanPham.stream().filter(s -> s.getMaSP().equals(hd.getTenSP())).findFirst().orElse(null);
+            String tenSP = sp != null ? sp.getTen() : "Không tìm thấy";
+            double gia = sp != null ? sp.getGia() : 0;
+            double thanhTien = gia * hd.getSoLuong();
+            sb.append(String.format(" - %s (Mã: %s), SL: %d, Giá: %s, Thành tiền: %s\n",
+                    tenSP, hd.getTenSP(), hd.getSoLuong(), formatPrice(gia), formatPrice(thanhTien)));
+        }
+        sb.append("--------------------------------\n");
+        sb.append("Tổng bill: ").append(formatPrice(tongBill)).append("\n");
+
+        JOptionPane.showMessageDialog(this, sb.toString(), "In hóa đơn", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    private void refreshTable() {
+        String[] columns = {"Mã HD", "Mã KH", "Ngày lập"};
+        Object[][] data = new Object[dsHoaDon.stream().map(HoaDon::getMaHD).distinct().count()][3];
+        List<String> uniqueMaHD = dsHoaDon.stream().map(HoaDon::getMaHD).distinct().toList();
+        for (int i = 0; i < uniqueMaHD.size(); i++) {
+            String maHD = uniqueMaHD.get(i);
+            HoaDon hd = dsHoaDon.stream().filter(h -> h.getMaHD().equals(maHD)).findFirst().orElse(null);
+            if (hd != null) {
+                data[i] = new Object[]{hd.getMaHD(), hd.getMaKH(), new SimpleDateFormat("dd/MM/yyyy").format(hd.getNgayLap())};
+            }
+        }
+        table.setModel(new javax.swing.table.DefaultTableModel(data, columns));
+        table.revalidate();
+        table.repaint();
+    }
+
+    private void clearForm() {
+        txtMaHD.setText("");
+        txtMaKH.setText("");
+        txtNgayLap.setText(new SimpleDateFormat("dd/MM/yyyy").format(new Date()));
+        JTextArea taSanPham = (JTextArea) ((JScrollPane) ((JPanel) formPanel.getComponent(0)).getComponent(1)).getViewport().getView();
+        taSanPham.setText("");
+    }
+}}

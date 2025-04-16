@@ -1,0 +1,29 @@
+package do_an_1;
+
+import javax.swing.*;
+
+public class MainApp {
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> {
+            // Welcome Frame
+            JFrame welcomeFrame = new JFrame("Chào Mừng");
+            welcomeFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            welcomeFrame.setSize(600, 600);
+            welcomeFrame.setLocationRelativeTo(null);
+
+            // Welcome Panel
+            WelcomePanel welcomePanel = new WelcomePanel(() -> {
+                // Hide welcome frame
+                welcomeFrame.setVisible(false);
+                welcomeFrame.dispose();
+
+                // Show main interface
+                GiaoDienChinh mainFrame = new GiaoDienChinh();
+                mainFrame.setVisible(true);
+            });
+
+            welcomeFrame.add(welcomePanel);
+            welcomeFrame.setVisible(true);
+        });
+    }
+}

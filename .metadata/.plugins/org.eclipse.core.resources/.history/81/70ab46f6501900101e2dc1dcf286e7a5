@@ -1,0 +1,25 @@
+package do_an_1;
+
+import java.io.Serializable;
+
+public class HoaDon implements Serializable {
+    private String maHD;
+    private String maKH;
+    private String tenSP;
+    private int soLuong;
+    private double tongTien;
+
+    public HoaDon(String maHD, String maKH, String tenSP, int soLuong, double tongTien) {
+        this.maHD = maHD;
+        this.maKH = maKH;
+        this.tenSP = tenSP;
+        this.soLuong = soLuong;
+        this.tongTien = tongTien;
+    }
+
+    public String getMaHD() { return maHD; }
+    public String getMaKH() { return maKH; }
+    public String getTenSP() { return tenSP; }
+    public int getSoLuong() { return soLuong; }
+    public double getTongTien() { return tongTien; }
+}

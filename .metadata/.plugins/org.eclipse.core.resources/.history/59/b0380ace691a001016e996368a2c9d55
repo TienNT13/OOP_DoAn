@@ -1,0 +1,174 @@
+package do_an_1;
+
+import javax.swing.*;
+import java.awt.*;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+
+public class PanelKhachHang extends JPanel {
+    private List<KhachHang> dsKhachHang;
+    private JTable table;
+    private JTextField txtMaKH, txtTen, txtDiaChi, txtSoDT;
+    private JPanel formPanel;
+    private DataManager dataManager;
+
+    public PanelKhachHang() {
+        setBackground(Color.decode("#F8EAD9"));
+        setLayout(new BorderLayout());
+        setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        dataManager = new FileDataManager();
+        dsKhachHang = new ArrayList<>();
+        try {
+            dsKhachHang = dataManager.loadFromFile("khachhang.dat");
+        } catch (IOException | ClassNotFoundException e) {
+            JOptionPane.showMessageDialog(this, "Lỗi khi đọc file khách hàng: " + e.getMessage());
+        }
+
+        // Nút điều khiển
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JButton btnShowForm = new JButton("Thêm khách hàng");
+        JButton btnXoa = new JButton("Xóa khách hàng");
+        JButton btnSapXep = new JButton("Sắp xếp theo mã KH");
+
+        btnShowForm.addActionListener(e -> {
+            formPanel.setVisible(true);
+            clearForm();
+        });
+        btnXoa.addActionListener(e -> xoaKhachHang());
+        btnSapXep.addActionListener(e -> sapXepTheoMaKH());
+
+        buttonPanel.add(btnShowForm);
+        buttonPanel.add(btnXoa);
+        buttonPanel.add(btnSapXep);
+        add(buttonPanel, BorderLayout.NORTH);
+
+        // Bảng hiển thị khách hàng
+        String[] columns = {"Mã KH", "Tên", "Địa chỉ", "Số ĐT"};
+        Object[][] data = new Object[dsKhachHang.size()][4];
+        for (int i = 0; i < dsKhachHang.size(); i++) {
+            KhachHang kh = dsKhachHang.get(i);
+            data[i] = new Object[]{kh.getMaKH(), kh.getTen(), kh.getDiaChi(), kh.getSoDT()};
+        }
+        table = new JTable(data, columns);
+        table.setFillsViewportHeight(true);
+        JScrollPane tableScrollPane = new JScrollPane(table);
+        add(tableScrollPane, BorderLayout.CENTER);
+
+        // Form nhập liệu
+        formPanel = new JPanel(new GridLayout(5, 2, 5, 5));
+        formPanel.add(new JLabel("Mã KH:"));
+        txtMaKH = new JTextField();
+        formPanel.add(txtMaKH);
+        formPanel.add(new JLabel("Tên:"));
+        txtTen = new JTextField();
+        formPanel.add(txtTen);
+        formPanel.add(new JLabel("Địa chỉ:"));
+        txtDiaChi = new JTextField();
+        formPanel.add(txtDiaChi);
+        formPanel.add(new JLabel("Số ĐT:"));
+        txtSoDT = new JTextField();
+        formPanel.add(txtSoDT);
+
+        JPanel formButtonPanel = new JPanel(new FlowLayout());
+        JButton btnThem = new JButton("Xác nhận");
+        JButton btnHuy = new JButton("Hủy");
+
+        btnThem.addActionListener(e -> themKhachHang());
+        btnHuy.addActionListener(e -> {
+            formPanel.setVisible(false);
+            clearForm();
+        });
+
+        formButtonPanel.add(btnThem);
+        formButtonPanel.add(btnHuy);
+        formPanel.add(new JLabel(""));
+        formPanel.add(formButtonPanel);
+
+        add(formPanel, BorderLayout.WEST);
+        formPanel.setVisible(false);
+
+        refreshTable();
+    }
+
+    private void themKhachHang() {
+        try {
+            String maKH = txtMaKH.getText();
+            String ten = txtTen.getText();
+            String diaChi = txtDiaChi.getText();
+            String soDT = txtSoDT.getText();
+
+            if (maKH.isEmpty() || ten.isEmpty() || diaChi.isEmpty() || soDT.isEmpty()) {
+                throw new IllegalArgumentException("Vui lòng điền đầy đủ thông tin!");
+            }
+
+            if (dsKhachHang.stream().anyMatch(kh -> kh.getMaKH().equals(maKH))) {
+                throw new IllegalArgumentException("Mã khách hàng đã tồn tại!");
+            }
+
+            KhachHang kh = new KhachHang(maKH, ten, diaChi, soDT);
+            dsKhachHang.add(kh);
+            dataManager.saveToFile(dsKhachHang, "khachhang.dat");
+            refreshTable();
+            formPanel.setVisible(false);
+            clearForm();
+            JOptionPane.showMessageDialog(this, "Thêm khách hàng thành công!");
+        } catch (IllegalArgumentException | IOException e) {
+            JOptionPane.showMessageDialog(this, e.getMessage());
+        }
+    }
+
+    private void xoaKhachHang() {
+        int row = table.getSelectedRow();
+        if (row == -1) {
+            JOptionPane.showMessageDialog(this, "Vui lòng chọn khách hàng để xóa!");
+            return;
+        }
+
+        int confirm = JOptionPane.showConfirmDialog(this, "Bạn có chắc muốn xóa khách hàng này?", "Xác nhận xóa", JOptionPane.YES_NO_OPTION);
+        if (confirm == JOptionPane.YES_OPTION) {
+            try {
+                dsKhachHang.remove(row);
+                dataManager.saveToFile(dsKhachHang, "khachhang.dat");
+                refreshTable();
+                formPanel.setVisible(false);
+                clearForm();
+                JOptionPane.showMessageDialog(this, "Xóa khách hàng thành công!");
+            } catch (IOException e) {
+                JOptionPane.showMessageDialog(this, "Lỗi khi lưu file: " + e.getMessage());
+            }
+        }
+    }
+
+    private void sapXepTheoMaKH() {
+        dsKhachHang.sort(Comparator.comparing(KhachHang::getMaKH));
+        try {
+            dataManager.saveToFile(dsKhachHang, "khachhang.dat");
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(this, "Lỗi khi lưu file: " + e.getMessage());
+        }
+        refreshTable();
+        JOptionPane.showMessageDialog(this, "Đã sắp xếp theo mã khách hàng!");
+    }
+
+    private void refreshTable() {
+        String[] columns = {"Mã KH", "Tên", "Địa chỉ", "Số ĐT"};
+        Object[][] data = new Object[dsKhachHang.size()][4];
+        for (int i = 0; i < dsKhachHang.size(); i++) {
+            KhachHang kh = dsKhachHang.get(i);
+            data[i] = new Object[]{kh.getMaKH(), kh.getTen(), kh.getDiaChi(), kh.getSoDT()};
+        }
+        table.setModel(new javax.swing.table.DefaultTableModel(data, columns));
+        table.revalidate();
+        table.repaint();
+    }
+
+    private void clearForm() {
+        txtMaKH.setText("");
+        txtTen.setText("");
+        txtDiaChi.setText("");
+        txtSoDT.setText("");
+    }
+}}

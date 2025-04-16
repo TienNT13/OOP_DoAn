@@ -1,0 +1,259 @@
+package do_an_1;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.io.File;
+import javax.swing.filechooser.FileNameExtensionFilter;
+import java.util.ArrayList;
+import java.util.List;
+
+public class PanelSanPham extends JPanel {
+    private JTable table;
+    private List<SanPham> dsSanPham;
+    private JButton btnAdd, btnEdit, btnDelete;
+
+    public PanelSanPham() {
+        dsSanPham = new ArrayList<>();
+
+        setLayout(new BorderLayout());
+
+        // Tạo bảng hiển thị sản phẩm
+        table = new JTable();
+        updateProductTable();
+        add(new JScrollPane(table), BorderLayout.CENTER);
+
+        // Tạo thanh công cụ với các nút chức năng
+        JPanel panelButtons = new JPanel();
+        panelButtons.setLayout(new FlowLayout(FlowLayout.LEFT));
+
+        btnAdd = new JButton("Thêm sản phẩm");
+        btnAdd.addActionListener(this::addProduct);
+        panelButtons.add(btnAdd);
+
+        btnEdit = new JButton("Sửa sản phẩm");
+        btnEdit.addActionListener(this::editProduct);
+        panelButtons.add(btnEdit);
+
+        btnDelete = new JButton("Xóa sản phẩm");
+        btnDelete.addActionListener(this::deleteProduct);
+        panelButtons.add(btnDelete);
+
+        add(panelButtons, BorderLayout.SOUTH);
+    }
+
+    private void addProduct(ActionEvent e) {
+        JDialog addProductDialog = new JDialog();
+        addProductDialog.setTitle("Thêm sản phẩm");
+        addProductDialog.setSize(400, 400);
+        addProductDialog.setLocationRelativeTo(this);
+
+        JPanel panel = new JPanel();
+        panel.setLayout(new GridLayout(11, 2, 10, 10));
+
+        JTextField txtMaSP = new JTextField();
+        JTextField txtTen = new JTextField();
+        JTextField txtHang = new JTextField();
+        JTextField txtGia = new JTextField();
+        JTextField txtSoLuong = new JTextField();
+        JTextField txtChip = new JTextField();
+        JTextField txtSoCamera = new JTextField();
+        JTextField txtDungLuongPin = new JTextField();
+        JTextField txtKichThuocManHinh = new JTextField();
+        JTextField txtHinhMinhHoa = new JTextField();
+
+        panel.add(new JLabel("Mã SP:"));
+        panel.add(txtMaSP);
+        panel.add(new JLabel("Tên sản phẩm:"));
+        panel.add(txtTen);
+        panel.add(new JLabel("Hãng:"));
+        panel.add(txtHang);
+        panel.add(new JLabel("Giá:"));
+        panel.add(txtGia);
+        panel.add(new JLabel("Số lượng:"));
+        panel.add(txtSoLuong);
+        panel.add(new JLabel("Chip:"));
+        panel.add(txtChip);
+        panel.add(new JLabel("Số camera:"));
+        panel.add(txtSoCamera);
+        panel.add(new JLabel("Dung lượng pin:"));
+        panel.add(txtDungLuongPin);
+        panel.add(new JLabel("Kích thước màn hình:"));
+        panel.add(txtKichThuocManHinh);
+        panel.add(new JLabel("Hình minh họa:"));
+        panel.add(txtHinhMinhHoa);
+
+        JButton btnSelectImage = new JButton("Chọn hình ảnh");
+        btnSelectImage.addActionListener(e1 -> {
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setDialogTitle("Chọn hình ảnh");
+            fileChooser.setFileFilter(new FileNameExtensionFilter("Hình ảnh", "jpg", "png", "jpeg", "bmp"));
+            int returnValue = fileChooser.showOpenDialog(null);
+            if (returnValue == JFileChooser.APPROVE_OPTION) {
+                File selectedFile = fileChooser.getSelectedFile();
+                txtHinhMinhHoa.setText(selectedFile.getAbsolutePath());
+            }
+        });
+        panel.add(btnSelectImage);
+
+        JButton btnAdd = new JButton("Thêm sản phẩm");
+        btnAdd.addActionListener(e1 -> {
+            try {
+                String maSP = txtMaSP.getText();
+                String ten = txtTen.getText();
+                String hang = txtHang.getText();
+                double gia = Double.parseDouble(txtGia.getText());
+                int soLuong = Integer.parseInt(txtSoLuong.getText());
+                String chip = txtChip.getText();
+                int soCamera = Integer.parseInt(txtSoCamera.getText());
+                int dungLuongPin = Integer.parseInt(txtDungLuongPin.getText());
+                double kichThuocManHinh = Double.parseDouble(txtKichThuocManHinh.getText());
+                String hinhMinhHoa = txtHinhMinhHoa.getText();
+
+                SanPham newProduct = new SanPham(maSP, ten, hang, gia, soLuong, chip, soCamera, dungLuongPin, kichThuocManHinh);
+                newProduct.setHinhMinhHoa(hinhMinhHoa);
+
+                dsSanPham.add(newProduct);
+                updateProductTable();
+                addProductDialog.dispose();
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(this, "Vui lòng nhập đúng định dạng cho các trường giá, số lượng, số camera, dung lượng pin và kích thước màn hình.");
+            }
+        });
+
+        panel.add(new JLabel());
+        panel.add(btnAdd);
+
+        addProductDialog.add(panel);
+        addProductDialog.setModal(true);
+        addProductDialog.setVisible(true);
+    }
+
+    private void editProduct(ActionEvent e) {
+        int selectedRow = table.getSelectedRow();
+        if (selectedRow >= 0) {
+            SanPham selectedProduct = dsSanPham.get(selectedRow);
+            JDialog editProductDialog = new JDialog();
+            editProductDialog.setTitle("Sửa sản phẩm");
+            editProductDialog.setSize(400, 400);
+            editProductDialog.setLocationRelativeTo(this);
+
+            JPanel panel = new JPanel();
+            panel.setLayout(new GridLayout(11, 2, 10, 10));
+
+            JTextField txtMaSP = new JTextField(selectedProduct.getMaSP());
+            JTextField txtTen = new JTextField(selectedProduct.getTen());
+            JTextField txtHang = new JTextField(selectedProduct.getHang());
+            JTextField txtGia = new JTextField(String.valueOf(selectedProduct.getGia()));
+            JTextField txtSoLuong = new JTextField(String.valueOf(selectedProduct.getSoLuong()));
+            JTextField txtChip = new JTextField(selectedProduct.getChip());
+            JTextField txtSoCamera = new JTextField(String.valueOf(selectedProduct.getSoCamera()));
+            JTextField txtDungLuongPin = new JTextField(String.valueOf(selectedProduct.getDungLuongPin()));
+            JTextField txtKichThuocManHinh = new JTextField(String.valueOf(selectedProduct.getKichThuocManHinh()));
+            JTextField txtHinhMinhHoa = new JTextField(selectedProduct.getHinhMinhHoa());
+
+            panel.add(new JLabel("Mã SP:"));
+            panel.add(txtMaSP);
+            panel.add(new JLabel("Tên sản phẩm:"));
+            panel.add(txtTen);
+            panel.add(new JLabel("Hãng:"));
+            panel.add(txtHang);
+            panel.add(new JLabel("Giá:"));
+            panel.add(txtGia);
+            panel.add(new JLabel("Số lượng:"));
+            panel.add(txtSoLuong);
+            panel.add(new JLabel("Chip:"));
+            panel.add(txtChip);
+            panel.add(new JLabel("Số camera:"));
+            panel.add(txtSoCamera);
+            panel.add(new JLabel("Dung lượng pin:"));
+            panel.add(txtDungLuongPin);
+            panel.add(new JLabel("Kích thước màn hình:"));
+            panel.add(txtKichThuocManHinh);
+            panel.add(new JLabel("Hình minh họa:"));
+            panel.add(txtHinhMinhHoa);
+
+            JButton btnSelectImage = new JButton("Chọn hình ảnh");
+            btnSelectImage.addActionListener(e1 -> {
+                JFileChooser fileChooser = new JFileChooser();
+                fileChooser.setDialogTitle("Chọn hình ảnh");
+                fileChooser.setFileFilter(new FileNameExtensionFilter("Hình ảnh", "jpg", "png", "jpeg", "bmp"));
+                int returnValue = fileChooser.showOpenDialog(null);
+                if (returnValue == JFileChooser.APPROVE_OPTION) {
+                    File selectedFile = fileChooser.getSelectedFile();
+                    txtHinhMinhHoa.setText(selectedFile.getAbsolutePath());
+                }
+            });
+            panel.add(btnSelectImage);
+
+            JButton btnSave = new JButton("Lưu thay đổi");
+            btnSave.addActionListener(e1 -> {
+                try {
+                    selectedProduct.setMaSP(txtMaSP.getText());
+                    selectedProduct.setTen(txtTen.getText());
+                    selectedProduct.setHang(txtHang.getText());
+                    selectedProduct.setGia(Double.parseDouble(txtGia.getText()));
+                    selectedProduct.setSoLuong(Integer.parseInt(txtSoLuong.getText()));
+                    selectedProduct.setChip(txtChip.getText());
+                    selectedProduct.setSoCamera(Integer.parseInt(txtSoCamera.getText()));
+                    selectedProduct.setDungLuongPin(Integer.parseInt(txtDungLuongPin.getText()));
+                    selectedProduct.setKichThuocManHinh(Double.parseDouble(txtKichThuocManHinh.getText()));
+                    selectedProduct.setHinhMinhHoa(txtHinhMinhHoa.getText());
+
+                    updateProductTable();
+                    editProductDialog.dispose();
+                } catch (NumberFormatException ex) {
+                    JOptionPane.showMessageDialog(this, "Vui lòng nhập đúng định dạng cho các trường giá, số lượng, số camera, dung lượng pin và kích thước màn hình.");
+                }
+            });
+
+            panel.add(new JLabel());
+            panel.add(btnSave);
+
+            editProductDialog.add(panel);
+            editProductDialog.setModal(true);
+            editProductDialog.setVisible(true);
+        } else {
+            JOptionPane.showMessageDialog(this, "Vui lòng chọn sản phẩm để sửa.");
+        }
+    }
+
+    private void deleteProduct(ActionEvent e) {
+        int selectedRow = table.getSelectedRow();
+        if (selectedRow >= 0) {
+            dsSanPham.remove(selectedRow);
+            updateProductTable();
+        } else {
+            JOptionPane.showMessageDialog(this, "Vui lòng chọn sản phẩm để xóa.");
+        }
+    }
+
+    private void updateProductTable() {
+        String[] columnNames = {"Mã SP", "Tên sản phẩm", "Hãng", "Giá", "Số lượng", "Chip", "Số camera", "Dung lượng pin", "Kích thước màn hình", "Hình minh họa"};
+        Object[][] data = new Object[dsSanPham.size()][columnNames.length];
+
+        for (int i = 0; i < dsSanPham.size(); i++) {
+            SanPham product = dsSanPham.get(i);
+            data[i][0] = product.getMaSP();
+            data[i][1] = product.getTen();
+            data[i][2] = product.getHang();
+            data[i][3] = product.getGia();
+            data[i][4] = product.getSoLuong();
+            data[i][5] = product.getChip();
+            data[i][6] = product.getSoCamera();
+            data[i][7] = product.getDungLuongPin();
+            data[i][8] = product.getKichThuocManHinh();
+            data[i][9] = product.getHinhMinhHoa();
+        }
+
+        table.setModel(new javax.swing.table.DefaultTableModel(data, columnNames));
+    }
+
+    public static void main(String[] args) {
+        JFrame frame = new JFrame("Quản lý sản phẩm");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setSize(800, 600);
+        frame.add(new PanelSanPham());
+        frame.setVisible(true);
+    }
+}

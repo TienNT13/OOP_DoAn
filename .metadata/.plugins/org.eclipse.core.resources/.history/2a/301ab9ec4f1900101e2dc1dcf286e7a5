@@ -1,0 +1,102 @@
+package do_an_1;
+
+import javax.swing.*;
+import java.awt.*;
+import java.io.IOException;
+import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.List;
+
+public class PanelHoaDon extends JPanel {
+    private List<HoaDon> dsHoaDon;
+    private JTable table;
+    private JTextField txtMaHD, txtMaKH, txtTenSP, txtSoLuong, txtTongTien;
+    private DataManager<HoaDon> dataManager;
+
+    // Phương thức tiện ích để định dạng giá
+    private String formatPrice(double price) {
+        DecimalFormat formatter = new DecimalFormat("#,###");
+        return formatter.format(price) + " VND";
+    }
+
+    public PanelHoaDon() {
+        dataManager = new FileDataManager<>();
+        dsHoaDon = new ArrayList<>();
+        try {
+            dsHoaDon = dataManager.loadFromFile("hoadon.dat");
+        } catch (IOException | ClassNotFoundException e) {
+            JOptionPane.showMessageDialog(this, "Lỗi khi đọc file hóa đơn: " + e.getMessage());
+        }
+
+        setLayout(new BorderLayout());
+        setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        // Bảng hiển thị hóa đơn
+        String[] columns = {"Mã HD", "Mã KH", "Tên SP", "Số lượng", "Tổng tiền"};
+        Object[][] data = new Object[dsHoaDon.size()][5];
+        for (int i = 0; i < dsHoaDon.size(); i++) {
+            HoaDon hd = dsHoaDon.get(i);
+            data[i] = new Object[]{hd.getMaHD(), hd.getMaKH(), hd.getTenSP(), hd.getSoLuong(), formatPrice(hd.getTongTien())};
+        }
+        table = new JTable(data, columns);
+        add(new JScrollPane(table), BorderLayout.CENTER);
+
+        // Form nhập liệu
+        JPanel formPanel = new JPanel(new GridLayout(6, 2, 5, 5));
+        formPanel.add(new JLabel("Mã HD:"));
+        txtMaHD = new JTextField();
+        formPanel.add(txtMaHD);
+        formPanel.add(new JLabel("Mã KH:"));
+        txtMaKH = new JTextField();
+        formPanel.add(txtMaKH);
+        formPanel.add(new JLabel("Tên SP:"));
+        txtTenSP = new JTextField();
+        formPanel.add(txtTenSP);
+        formPanel.add(new JLabel("Số lượng:"));
+        txtSoLuong = new JTextField();
+        formPanel.add(txtSoLuong);
+        formPanel.add(new JLabel("Tổng tiền:"));
+        txtTongTien = new JTextField();
+        formPanel.add(txtTongTien);
+
+        JButton btnThem = new JButton("Thêm");
+        btnThem.addActionListener(e -> themHoaDon());
+        formPanel.add(btnThem);
+
+        add(formPanel, BorderLayout.NORTH);
+    }
+
+    private void themHoaDon() {
+        try {
+            String maHD = txtMaHD.getText();
+            String maKH = txtMaKH.getText();
+            String tenSP = txtTenSP.getText();
+            int soLuong = Integer.parseInt(txtSoLuong.getText());
+            double tongTien = Double.parseDouble(txtTongTien.getText());
+
+            if (maHD.isEmpty() || maKH.isEmpty() || tenSP.isEmpty()) {
+                throw new IllegalArgumentException("Vui lòng điền đầy đủ thông tin!");
+            }
+
+            HoaDon hd = new HoaDon(maHD, maKH, tenSP, soLuong, tongTien);
+            dsHoaDon.add(hd);
+            dataManager.saveToFile(dsHoaDon, "hoadon.dat");
+            refreshTable();
+            JOptionPane.showMessageDialog(this, "Thêm hóa đơn thành công!");
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "Số lượng và tổng tiền phải là số!");
+        } catch (IllegalArgumentException | IOException e) {
+            JOptionPane.showMessageDialog(this, e.getMessage());
+        }
+    }
+
+    private void refreshTable() {
+        String[] columns = {"Mã HD", "Mã KH", "Tên SP", "Số lượng", "Tổng tiền"};
+        Object[][] data = new Object[dsHoaDon.size()][5];
+        for (int i = 0; i < dsHoaDon.size(); i++) {
+            HoaDon hd = dsHoaDon.get(i);
+            data[i] = new Object[]{hd.getMaHD(), hd.getMaKH(), hd.getTenSP(), hd.getSoLuong(), formatPrice(hd.getTongTien())};
+        }
+        table.setModel(new javax.swing.table.DefaultTableModel(data, columns));
+    }
+}

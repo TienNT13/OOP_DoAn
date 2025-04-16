@@ -1,0 +1,54 @@
+package do_an_1;
+
+import javax.swing.*;
+import java.awt.*;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+public class PanelThongKe extends JPanel {
+    private List<HoaDon> dsHoaDon;
+    private JLabel lblTongDoanhThu;
+    private DataManager<HoaDon> dataManager;
+
+    public PanelThongKe() {
+        dataManager = new FileDataManager<>();
+        dsHoaDon = new ArrayList<>();
+        try {
+            dsHoaDon = dataManager.loadFromFile("hoadon.dat");
+        } catch (IOException | ClassNotFoundException e) {
+            JOptionPane.showMessageDialog(this, "Lỗi khi đọc file hóa đơn: " + e.getMessage());
+        }
+
+        setLayout(new BorderLayout());
+        setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        // Tính tổng doanh thu
+        double tongDoanhThu = 0;
+        for (HoaDon hd : dsHoaDon) {
+            tongDoanhThu += hd.getTongTien();
+        }
+
+        lblTongDoanhThu = new JLabel("Tổng doanh thu: " + tongDoanhThu + " VNĐ", SwingConstants.CENTER);
+        lblTongDoanhThu.setFont(new Font("SansSerif", Font.BOLD, 16));
+        add(lblTongDoanhThu, BorderLayout.CENTER);
+
+        // Nút làm mới
+        JButton btnRefresh = new JButton("Làm mới");
+        btnRefresh.addActionListener(e -> refresh());
+        add(btnRefresh, BorderLayout.SOUTH);
+    }
+
+    private void refresh() {
+        try {
+            dsHoaDon = dataManager.loadFromFile("hoadon.dat");
+            double tongDoanhThu = 0;
+            for (HoaDon hd : dsHoaDon) {
+                tongDoanhThu += hd.getTongTien();
+            }
+            lblTongDoanhThu.setText("Tổng doanh thu: " + tongDoanhThu + " VNĐ");
+        } catch (IOException | ClassNotFoundException e) {
+            JOptionPane.showMessageDialog(this, "Lỗi khi đọc file hóa đơn: " + e.getMessage());
+        }
+    }
+}

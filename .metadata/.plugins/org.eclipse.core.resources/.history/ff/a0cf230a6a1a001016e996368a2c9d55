@@ -1,0 +1,23 @@
+package do_an_1;
+
+import java.io.Serializable;
+
+public class KhachHang implements Serializable {
+    private String maKH, ten, diaChi, soDT;
+
+    public KhachHang(String maKH, String ten, String diaChi, String soDT) {
+        this.maKH = maKH;
+        this.ten = ten;
+        this.diaChi = diaChi;
+        this.soDT = soDT;
+    }
+
+    public String getMaKH() { return maKH; }
+    public void setMaKH(String maKH) { this.maKH = maKH; }
+    public String getTen() { return ten; }
+    public void setTen(String ten) { this.ten = ten; }
+    public String getDiaChi() { return diaChi; }
+    public void setDiaChi(String diaChi) { this.diaChi = diaChi; }
+    public String getSoDT() { return soDT; }
+    public void setSoDT(String soDT) { this.soDT = soDT; }
+}

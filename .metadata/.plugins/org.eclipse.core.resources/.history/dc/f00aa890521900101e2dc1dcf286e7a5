@@ -1,0 +1,109 @@
+package do_an_1;
+
+import javax.swing.*;
+import java.awt.*;
+import java.io.IOException;
+import java.text.DecimalFormat;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
+
+public class PanelTimKiem extends JPanel {
+    private List<SanPham> dsSanPham;
+    private List<KhachHang> dsKhachHang;
+    private List<HoaDon> dsHoaDon;
+    private JTable table;
+    private JTextField txtSearch;
+    private JComboBox<String> cbType;
+    private DataManager<SanPham> spDataManager;
+    private DataManager<KhachHang> khDataManager;
+    private DataManager<HoaDon> hdDataManager;
+
+    private String formatPrice(double price) {
+        DecimalFormat formatter = new DecimalFormat("#,###");
+        return formatter.format(price) + " VND";
+    }
+
+    public PanelTimKiem() {
+        spDataManager = new FileDataManager<>();
+        khDataManager = new FileDataManager<>();
+        hdDataManager = new FileDataManager<>();
+
+        dsSanPham = new ArrayList<>();
+        dsKhachHang = new ArrayList<>();
+        dsHoaDon = new ArrayList<>();
+
+        try {
+            dsSanPham = spDataManager.loadFromFile("sanpham.dat");
+            dsKhachHang = khDataManager.loadFromFile("khachhang.dat");
+            dsHoaDon = hdDataManager.loadFromFile("hoadon.dat");
+        } catch (IOException | ClassNotFoundException e) {
+            JOptionPane.showMessageDialog(this, "Lỗi khi đọc file: " + e.getMessage());
+        }
+
+        setLayout(new BorderLayout());
+        setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        // Form tìm kiếm
+        JPanel searchPanel = new JPanel(new FlowLayout());
+        searchPanel.add(new JLabel("Tìm kiếm:"));
+        txtSearch = new JTextField(20);
+        searchPanel.add(txtSearch);
+
+        String[] types = {"Sản phẩm", "Khách hàng", "Hóa đơn"};
+        cbType = new JComboBox<>(types);
+        searchPanel.add(cbType);
+
+        JButton btnSearch = new JButton("Tìm");
+        btnSearch.addActionListener(e -> timKiem());
+        searchPanel.add(btnSearch);
+
+        add(searchPanel, BorderLayout.NORTH);
+
+        // Bảng hiển thị kết quả
+        table = new JTable();
+        add(new JScrollPane(table), BorderLayout.CENTER);
+    }
+
+    private void timKiem() {
+        String keyword = txtSearch.getText().toLowerCase();
+        String type = cbType.getSelectedItem().toString();
+
+        if (type.equals("Sản phẩm")) {
+            String[] columns = {"Mã SP", "Tên", "Hãng", "Giá", "Số lượng", "Thông số"};
+            List<Object[]> dataList = new ArrayList<>();
+            for (SanPham sp : dsSanPham) {
+                if (sp.getMaSP().toLowerCase().contains(keyword) || 
+                    sp.getTen().toLowerCase().contains(keyword) || 
+                    sp.getHang().toLowerCase().contains(keyword)) {
+                    dataList.add(new Object[]{sp.getMaSP(), sp.getTen(), sp.getHang(), formatPrice(sp.getGia()), sp.getSoLuong(), sp.getThongSo()});
+                }
+            }
+            Object[][] data = dataList.toArray(new Object[0][]);
+            table.setModel(new javax.swing.table.DefaultTableModel(data, columns));
+        } else if (type.equals("Khách hàng")) {
+            String[] columns = {"Mã KH", "Tên KH", "SĐT"};
+            List<Object[]> dataList = new ArrayList<>();
+            for (KhachHang kh : dsKhachHang) {
+                if (kh.getMaKH().toLowerCase().contains(keyword) || kh.getTenKH().toLowerCase().contains(keyword)) {
+                    dataList.add(new Object[]{kh.getMaKH(), kh.getTenKH(), kh.getSdt()});
+                }
+            }
+            Object[][] data = dataList.toArray(new Object[0][]);
+            table.setModel(new javax.swing.table.DefaultTableModel(data, columns));
+        } else if (type.equals("Hóa đơn")) {
+            String[] columns = {"Mã HD", "Mã KH", "Mã SP", "Số lượng", "Tổng tiền", "Ngày lập"};
+            List<Object[]> dataList = new ArrayList<>();
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+            for (HoaDon hd : dsHoaDon) {
+                if (hd.getMaHD().toLowerCase().contains(keyword) || 
+                    hd.getMaKH().toLowerCase().contains(keyword) || 
+                    hd.getTenSP().toLowerCase().contains(keyword)) {
+                    dataList.add(new Object[]{hd.getMaHD(), hd.getMaKH(), hd.getTenSP(), hd.getSoLuong(), formatPrice(hd.getTongTien()), hd.getNgayLap().format(formatter)});
+                }
+            }
+            Object[][] data = dataList.toArray(new Object[0][]);
+            table.setModel(new javax.swing.table.DefaultTableModel(data, columns));
+        }
+    }
+}

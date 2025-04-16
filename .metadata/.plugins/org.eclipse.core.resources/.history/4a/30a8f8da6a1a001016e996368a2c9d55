@@ -1,0 +1,9 @@
+package do_an_1;
+
+import java.io.IOException;
+import java.util.List;
+
+public interface DataManager {
+    <T> void saveToFile(List<T> data, String fileName) throws IOException;
+    <T> List<T> loadFromFile(String fileName) throws IOException, ClassNotFoundException;
+}
