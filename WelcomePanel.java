@@ -1,0 +1,53 @@
+package do_an_1;
+
+import javax.swing.*;
+import java.awt.*;
+
+public class WelcomePanel extends JPanel {
+    private JButton startButton;
+
+    public WelcomePanel(Runnable onStart) {
+        setLayout(new BorderLayout());
+        setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        setBackground(Color.decode("#F8EAD9")); // Set background color
+
+        // Panel chính giữa để chứa logo và dòng chữ
+        JPanel centerPanel = new JPanel();
+        centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
+        centerPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        centerPanel.setOpaque(false); // Transparent to show WelcomePanel's background
+
+        // Thêm logo
+        JLabel logoLabel = new JLabel();
+        try {
+            ImageIcon logoIcon = new ImageIcon("D:/PTITer-102/ki_2_nam_4/OOP/doan/hinhminhhoa.png");
+            Image scaledImage = logoIcon.getImage().getScaledInstance(300, 300, Image.SCALE_SMOOTH);
+            logoLabel.setIcon(new ImageIcon(scaledImage));
+            logoLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Lỗi khi tải logo: " + e.getMessage());
+        }
+        centerPanel.add(logoLabel);
+
+        // Thêm khoảng cách
+        centerPanel.add(Box.createVerticalStrut(20));
+
+        // Thêm dòng chữ "Đề tài: Quản lý cửa hàng bán điện thoại"
+        JLabel titleLabel = new JLabel("Đề tài: Quản lý cửa hàng bán điện thoại");
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
+        titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        centerPanel.add(titleLabel);
+
+        // Thêm khoảng cách
+        centerPanel.add(Box.createVerticalStrut(30));
+
+        // Thêm nút "Bắt đầu"
+        startButton = new JButton("Bắt đầu");
+        startButton.setFont(new Font("Arial", Font.PLAIN, 18));
+        startButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+        startButton.addActionListener(e -> onStart.run());
+        centerPanel.add(startButton);
+
+        add(centerPanel, BorderLayout.CENTER);
+    }
+}
