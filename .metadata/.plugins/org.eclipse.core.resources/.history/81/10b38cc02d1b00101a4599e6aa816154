@@ -240,9 +240,9 @@ public class PanelTimKiem extends JPanel {
         JPanel imagePanel = new JPanel();
         imagePanel.setBackground(Color.decode("#F8EAD9"));
         JLabel lblImage = new JLabel();
-        if (sp != null && sp.getHinhMinhHoa() != null && !sp.getHinhMinhHoa().isEmpty()) {
+        if (sp != null && sp.getImagePath() != null && !sp.getImagePath().isEmpty()) {
             try {
-                ImageIcon icon = new ImageIcon(sp.getHinhMinhHoa());
+                ImageIcon icon = new ImageIcon(sp.getImagePath());
                 Image scaledImage = icon.getImage().getScaledInstance(150, 150, Image.SCALE_SMOOTH);
                 lblImage.setIcon(new ImageIcon(scaledImage));
             } catch (Exception e) {

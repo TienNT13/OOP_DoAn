@@ -223,40 +223,18 @@ public class PanelTimKiem extends JPanel {
     private void hienThiChiTietSanPham(String maSP) {
         JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Chi tiết sản phẩm", true);
         dialog.setLayout(new BorderLayout());
-        dialog.setSize(600, 300);
+        dialog.setSize(400, 300);
         dialog.setLocationRelativeTo(this);
         dialog.getContentPane().setBackground(Color.decode("#F8EAD9"));
 
-        JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
-        mainPanel.setBackground(Color.decode("#F8EAD9"));
-        mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        JPanel infoPanel = new JPanel(new GridLayout(9, 2, 5, 5));
+        infoPanel.setBackground(Color.decode("#F8EAD9"));
+        infoPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
         SanPham sp = dsSanPham.stream()
                 .filter(s -> s.getMaSP().equals(maSP))
                 .findFirst()
                 .orElse(null);
-
-        // Hiển thị hình ảnh
-        JPanel imagePanel = new JPanel();
-        imagePanel.setBackground(Color.decode("#F8EAD9"));
-        JLabel lblImage = new JLabel();
-        if (sp != null && sp.getHinhMinhHoa() != null && !sp.getHinhMinhHoa().isEmpty()) {
-            try {
-                ImageIcon icon = new ImageIcon(sp.getHinhMinhHoa());
-                Image scaledImage = icon.getImage().getScaledInstance(150, 150, Image.SCALE_SMOOTH);
-                lblImage.setIcon(new ImageIcon(scaledImage));
-            } catch (Exception e) {
-                lblImage.setText("Không tải được ảnh");
-            }
-        } else {
-            lblImage.setText("Không có ảnh");
-        }
-        imagePanel.add(lblImage);
-        mainPanel.add(imagePanel, BorderLayout.WEST);
-
-        // Thông tin sản phẩm
-        JPanel infoPanel = new JPanel(new GridLayout(9, 2, 5, 5));
-        infoPanel.setBackground(Color.decode("#F8EAD9"));
 
         infoPanel.add(new JLabel("Mã SP:"));
         infoPanel.add(new JLabel(maSP));
@@ -277,9 +255,7 @@ public class PanelTimKiem extends JPanel {
         infoPanel.add(new JLabel("Màn hình (inch):"));
         infoPanel.add(new JLabel(sp != null ? String.valueOf(sp.getKichThuocManHinh()) : "Không tìm thấy"));
 
-        mainPanel.add(infoPanel, BorderLayout.CENTER);
-
-        dialog.add(mainPanel, BorderLayout.CENTER);
+        dialog.add(infoPanel, BorderLayout.CENTER);
 
         JButton btnDong = new JButton("Đóng");
         btnDong.addActionListener(e -> dialog.dispose());
