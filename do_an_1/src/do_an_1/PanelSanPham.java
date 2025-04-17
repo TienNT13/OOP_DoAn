@@ -12,13 +12,13 @@ import java.util.List;
 
 public class PanelSanPham extends JPanel {
     private List<SanPham> dsSanPham;
-    private JTable table;
     private JTextField txtMaSP, txtTen, txtHang, txtGia, txtSoLuong, txtChip, txtSoCamera, txtDungLuongPin, txtKichThuocManHinh;
     private JTextField txtHinhMinhHoa;
     private JPanel formPanel;
     private DataManager<SanPham> dataManager;
     private DataManager<HoaDon> hoaDonDataManager;
     private boolean isEditing = false;
+    private JPanel productPanel;
 
     private String formatPrice(double price) {
         DecimalFormat formatter = new DecimalFormat("#,###");
@@ -28,7 +28,7 @@ public class PanelSanPham extends JPanel {
     public PanelSanPham() {
         setBackground(Color.decode("#F8EAD9"));
         setLayout(new BorderLayout());
-        setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
 
         dataManager = new FileDataManager<>();
         hoaDonDataManager = new FileDataManager<>();
@@ -40,17 +40,32 @@ public class PanelSanPham extends JPanel {
         }
 
         // Nút điều khiển
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        buttonPanel.setBackground(Color.decode("#F8EAD9"));
         JButton btnShowForm = new JButton("Thêm sản phẩm");
         JButton btnSua = new JButton("Sửa sản phẩm");
         JButton btnXoa = new JButton("Xóa sản phẩm");
 
+        btnShowForm.setBackground(Color.decode("#4CAF50"));
+        btnShowForm.setForeground(Color.WHITE);
+        btnShowForm.setFont(new Font("Arial", Font.BOLD, 12));
+        btnShowForm.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
         btnShowForm.addActionListener(e -> {
             formPanel.setVisible(true);
             clearForm();
             isEditing = false;
         });
-        btnSua.addActionListener(e -> chuanBiSuaSanPham());
+
+        btnSua.setBackground(Color.decode("#FFC107"));
+        btnSua.setForeground(Color.BLACK);
+        btnSua.setFont(new Font("Arial", Font.BOLD, 12));
+        btnSua.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+        btnSua.addActionListener(e -> showProductSelectionDialog());
+
+        btnXoa.setBackground(Color.decode("#F44336"));
+        btnXoa.setForeground(Color.WHITE);
+        btnXoa.setFont(new Font("Arial", Font.BOLD, 12));
+        btnXoa.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
         btnXoa.addActionListener(e -> xoaSanPham());
 
         buttonPanel.add(btnShowForm);
@@ -58,65 +73,82 @@ public class PanelSanPham extends JPanel {
         buttonPanel.add(btnXoa);
         add(buttonPanel, BorderLayout.NORTH);
 
-        // Bảng hiển thị sản phẩm
-        String[] columns = {"Mã SP", "Tên", "Hãng", "Giá", "Số lượng", "Đã bán"};
-        Object[][] data = new Object[dsSanPham.size()][6];
-        for (int i = 0; i < dsSanPham.size(); i++) {
-            SanPham sp = dsSanPham.get(i);
-            int soLuongDaBan = tinhSoLuongDaBan(sp.getMaSP());
-            data[i] = new Object[]{sp.getMaSP(), sp.getTen(), sp.getHang(), formatPrice(sp.getGia()), sp.getSoLuong(), soLuongDaBan};
-        }
-        table = new JTable(data, columns);
-        table.setFillsViewportHeight(true);
-        JScrollPane tableScrollPane = new JScrollPane(table);
-        add(tableScrollPane, BorderLayout.CENTER);
-
         // Form nhập liệu
         formPanel = new JPanel(new GridLayout(11, 2, 5, 5));
+        formPanel.setBackground(Color.decode("#FFF3E0"));
+        formPanel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(Color.decode("#D3A875"), 1),
+            BorderFactory.createEmptyBorder(10, 10, 10, 10)
+        ));
+
         formPanel.add(new JLabel("Mã SP:"));
         txtMaSP = new JTextField();
+        txtMaSP.setBorder(BorderFactory.createLineBorder(Color.decode("#D3A875")));
         formPanel.add(txtMaSP);
+
         formPanel.add(new JLabel("Tên:"));
         txtTen = new JTextField();
+        txtTen.setBorder(BorderFactory.createLineBorder(Color.decode("#D3A875")));
         formPanel.add(txtTen);
+
         formPanel.add(new JLabel("Hãng:"));
         txtHang = new JTextField();
+        txtHang.setBorder(BorderFactory.createLineBorder(Color.decode("#D3A875")));
         formPanel.add(txtHang);
+
         formPanel.add(new JLabel("Giá:"));
         txtGia = new JTextField();
+        txtGia.setBorder(BorderFactory.createLineBorder(Color.decode("#D3A875")));
         formPanel.add(txtGia);
+
         formPanel.add(new JLabel("Số lượng:"));
         txtSoLuong = new JTextField();
+        txtSoLuong.setBorder(BorderFactory.createLineBorder(Color.decode("#D3A875")));
         formPanel.add(txtSoLuong);
+
         formPanel.add(new JLabel("Chip:"));
         txtChip = new JTextField();
+        txtChip.setBorder(BorderFactory.createLineBorder(Color.decode("#D3A875")));
         formPanel.add(txtChip);
+
         formPanel.add(new JLabel("Số camera:"));
         txtSoCamera = new JTextField();
+        txtSoCamera.setBorder(BorderFactory.createLineBorder(Color.decode("#D3A875")));
         formPanel.add(txtSoCamera);
+
         formPanel.add(new JLabel("Dung lượng pin (mAh):"));
         txtDungLuongPin = new JTextField();
+        txtDungLuongPin.setBorder(BorderFactory.createLineBorder(Color.decode("#D3A875")));
         formPanel.add(txtDungLuongPin);
+
         formPanel.add(new JLabel("Kích thước màn hình (inch):"));
         txtKichThuocManHinh = new JTextField();
+        txtKichThuocManHinh.setBorder(BorderFactory.createLineBorder(Color.decode("#D3A875")));
         formPanel.add(txtKichThuocManHinh);
 
         // Thêm panel con cho hình minh họa
         formPanel.add(new JLabel("Hình minh họa:"));
         JPanel hinhPanel = new JPanel(new BorderLayout());
+        hinhPanel.setBackground(Color.decode("#FFF3E0"));
         txtHinhMinhHoa = new JTextField();
         txtHinhMinhHoa.setEditable(false);
+        txtHinhMinhHoa.setBorder(BorderFactory.createLineBorder(Color.decode("#D3A875")));
         JButton btnChonAnh = new JButton("Chọn ảnh");
+        btnChonAnh.setBackground(Color.decode("#D3A875"));
+        btnChonAnh.setForeground(Color.WHITE);
         btnChonAnh.addActionListener(e -> chonAnh());
         hinhPanel.add(txtHinhMinhHoa, BorderLayout.CENTER);
         hinhPanel.add(btnChonAnh, BorderLayout.EAST);
         formPanel.add(hinhPanel);
 
         JPanel formButtonPanel = new JPanel(new FlowLayout());
+        formButtonPanel.setBackground(Color.decode("#FFF3E0"));
         JButton btnThem = new JButton("Xác nhận");
         JButton btnHuy = new JButton("Hủy");
         JButton btnThoat = new JButton("Thoát");
 
+        btnThem.setBackground(Color.decode("#4CAF50"));
+        btnThem.setForeground(Color.WHITE);
         btnThem.addActionListener(e -> {
             if (isEditing) {
                 suaSanPham();
@@ -124,11 +156,17 @@ public class PanelSanPham extends JPanel {
                 themSanPham();
             }
         });
+
+        btnHuy.setBackground(Color.decode("#F44336"));
+        btnHuy.setForeground(Color.WHITE);
         btnHuy.addActionListener(e -> {
             formPanel.setVisible(false);
             clearForm();
             isEditing = false;
         });
+
+        btnThoat.setBackground(Color.decode("#D3A875"));
+        btnThoat.setForeground(Color.WHITE);
         btnThoat.addActionListener(e -> {
             formPanel.setVisible(false);
             clearForm();
@@ -144,48 +182,193 @@ public class PanelSanPham extends JPanel {
         add(formPanel, BorderLayout.WEST);
         formPanel.setVisible(false);
 
-        // Sự kiện nhấn chuột vào bảng
-        table.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                int row = table.rowAtPoint(e.getPoint());
-                if (row != -1) {
-                    hienThiChiTietSanPham(row);
-                } else {
-                    formPanel.setVisible(false);
-                    clearForm();
-                    isEditing = false;
-                }
+        // Panel hiển thị sản phẩm dạng lưới
+        productPanel = new JPanel(new GridLayout(0, 5, 15, 15));
+        productPanel.setBackground(Color.decode("#F8EAD9"));
+        JScrollPane productScrollPane = new JScrollPane(productPanel);
+        productScrollPane.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
+        add(productScrollPane, BorderLayout.CENTER);
+
+        refreshProductGrid();
+    }
+
+    private void showProductSelectionDialog() {
+        if (dsSanPham.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Danh sách sản phẩm trống!");
+            return;
+        }
+
+        JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Chọn sản phẩm để sửa", true);
+        dialog.setLayout(new BorderLayout());
+        dialog.setSize(300, 150);
+        dialog.setLocationRelativeTo(this);
+        dialog.getContentPane().setBackground(Color.decode("#F8EAD9"));
+
+        JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        mainPanel.setBackground(Color.decode("#F8EAD9"));
+
+        // Tạo JComboBox để hiển thị danh sách sản phẩm
+        JComboBox<String> productComboBox = new JComboBox<>();
+        for (SanPham sp : dsSanPham) {
+            productComboBox.addItem(sp.getTen() + " (" + sp.getMaSP() + ")");
+        }
+        mainPanel.add(productComboBox, BorderLayout.CENTER);
+
+        JPanel buttonPanel = new JPanel(new FlowLayout());
+        buttonPanel.setBackground(Color.decode("#F8EAD9"));
+
+        JButton btnChon = new JButton("Chọn");
+        btnChon.setBackground(Color.decode("#4CAF50"));
+        btnChon.setForeground(Color.WHITE);
+        btnChon.addActionListener(e -> {
+            int selectedIndex = productComboBox.getSelectedIndex();
+            if (selectedIndex != -1) {
+                SanPham selectedProduct = dsSanPham.get(selectedIndex);
+                chuanBiSuaSanPham(selectedProduct);
+                dialog.dispose();
+            } else {
+                JOptionPane.showMessageDialog(dialog, "Vui lòng chọn một sản phẩm!");
             }
         });
 
-        refreshTable();
+        JButton btnHuy = new JButton("Hủy");
+        btnHuy.setBackground(Color.decode("#F44336"));
+        btnHuy.setForeground(Color.WHITE);
+        btnHuy.addActionListener(e -> dialog.dispose());
+
+        buttonPanel.add(btnChon);
+        buttonPanel.add(btnHuy);
+        mainPanel.add(buttonPanel, BorderLayout.SOUTH);
+
+        dialog.add(mainPanel, BorderLayout.CENTER);
+        dialog.setVisible(true);
+    }
+
+    private void chuanBiSuaSanPham(SanPham sp) {
+        txtMaSP.setText(sp.getMaSP());
+        txtTen.setText(sp.getTen());
+        txtHang.setText(sp.getHang());
+        txtGia.setText(String.valueOf(sp.getGia()));
+        txtSoLuong.setText(String.valueOf(sp.getSoLuong()));
+        txtChip.setText(sp.getChip());
+        txtSoCamera.setText(String.valueOf(sp.getSoCamera()));
+        txtDungLuongPin.setText(String.valueOf(sp.getDungLuongPin()));
+        txtKichThuocManHinh.setText(String.valueOf(sp.getKichThuocManHinh()));
+        txtHinhMinhHoa.setText(sp.getHinhMinhHoa() != null ? sp.getHinhMinhHoa() : "");
+        formPanel.setVisible(true);
+        isEditing = true;
+    }
+
+    private void refreshProductGrid() {
+        productPanel.removeAll();
+        for (int i = 0; i < dsSanPham.size(); i++) {
+            SanPham sp = dsSanPham.get(i);
+            int index = i;
+
+            JPanel itemPanel = new JPanel(new BorderLayout(5, 5));
+            itemPanel.setBackground(Color.WHITE);
+            itemPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(Color.LIGHT_GRAY),
+                BorderFactory.createEmptyBorder(5, 5, 5, 5)
+            ));
+            itemPanel.setPreferredSize(new Dimension(150, 250));
+            // Thêm bóng đổ
+            itemPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 2, 2, Color.decode("#D3A875")),
+                BorderFactory.createEmptyBorder(5, 5, 5, 5)
+            ));
+
+            // Hình minh họa
+            JLabel lblHinh = new JLabel();
+            lblHinh.setHorizontalAlignment(SwingConstants.CENTER);
+            if (sp.getHinhMinhHoa() != null && !sp.getHinhMinhHoa().isEmpty()) {
+                try {
+                    ImageIcon icon = new ImageIcon(sp.getHinhMinhHoa());
+                    Image scaledImage = icon.getImage().getScaledInstance(120, 120, Image.SCALE_SMOOTH);
+                    lblHinh.setIcon(new ImageIcon(scaledImage));
+                } catch (Exception e) {
+                    lblHinh.setText("Không có ảnh");
+                }
+            } else {
+                lblHinh.setText("Không có ảnh");
+            }
+            itemPanel.add(lblHinh, BorderLayout.NORTH);
+
+            // Thông tin sản phẩm
+            JPanel infoPanel = new JPanel();
+            infoPanel.setBackground(Color.WHITE);
+            infoPanel.setLayout(new BoxLayout(infoPanel, BoxLayout.Y_AXIS));
+
+            JLabel lblTen = new JLabel(sp.getTen());
+            lblTen.setAlignmentX(Component.CENTER_ALIGNMENT);
+            lblTen.setFont(new Font("Arial", Font.BOLD, 12));
+            infoPanel.add(lblTen);
+
+            JLabel lblGia = new JLabel(formatPrice(sp.getGia()));
+            lblGia.setAlignmentX(Component.CENTER_ALIGNMENT);
+            lblGia.setForeground(Color.BLACK);
+            lblGia.setFont(new Font("Arial", Font.BOLD, 12));
+            infoPanel.add(lblGia);
+
+            itemPanel.add(infoPanel, BorderLayout.CENTER);
+
+            // Hiệu ứng hover
+            itemPanel.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseEntered(MouseEvent e) {
+                    itemPanel.setBackground(Color.decode("#F5F5F5"));
+                    itemPanel.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(Color.decode("#4CAF50"), 2),
+                        BorderFactory.createEmptyBorder(5, 5, 5, 5)
+                    ));
+                }
+
+                @Override
+                public void mouseExited(MouseEvent e) {
+                    if (itemPanel.getBorder() != BorderFactory.createLineBorder(Color.BLUE)) {
+                        itemPanel.setBackground(Color.WHITE);
+                        itemPanel.setBorder(BorderFactory.createCompoundBorder(
+                            BorderFactory.createMatteBorder(0, 0, 2, 2, Color.decode("#D3A875")),
+                            BorderFactory.createEmptyBorder(5, 5, 5, 5)
+                        ));
+                    }
+                }
+
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    clearSelection();
+                    itemPanel.setBorder(BorderFactory.createLineBorder(Color.BLUE));
+                    hienThiChiTietSanPham(index);
+                }
+            });
+
+            productPanel.add(itemPanel);
+        }
+        productPanel.revalidate();
+        productPanel.repaint();
     }
 
     private void hienThiChiTietSanPham(int row) {
         SanPham sp = dsSanPham.get(row);
 
-        // Tạo cửa sổ chi tiết
         JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Chi tiết sản phẩm", true);
         dialog.setLayout(new BorderLayout());
         dialog.setSize(600, 400);
         dialog.setLocationRelativeTo(this);
         dialog.getContentPane().setBackground(Color.decode("#F8EAD9"));
 
-        // Panel chính sử dụng BorderLayout
         JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
         mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         mainPanel.setBackground(Color.decode("#F8EAD9"));
 
-        // Panel cho hình minh họa (bên trái)
         JPanel imagePanel = new JPanel();
         imagePanel.setBackground(Color.decode("#F8EAD9"));
         JLabel lblHinhMinhHoa = new JLabel("");
         if (sp.getHinhMinhHoa() != null && !sp.getHinhMinhHoa().isEmpty()) {
             try {
                 ImageIcon icon = new ImageIcon(sp.getHinhMinhHoa());
-                // Tính toán kích thước để giữ tỷ lệ
-                int maxSize = 200; // Kích thước tối đa cho chiều rộng hoặc cao
+                int maxSize = 200;
                 Image image = icon.getImage();
                 int width = image.getWidth(null);
                 int height = image.getHeight(null);
@@ -203,7 +386,6 @@ public class PanelSanPham extends JPanel {
         imagePanel.add(lblHinhMinhHoa);
         mainPanel.add(imagePanel, BorderLayout.WEST);
 
-        // Panel cho thông tin chi tiết (bên phải)
         JPanel detailPanel = new JPanel(new GridLayout(10, 2, 5, 5));
         detailPanel.setBackground(Color.decode("#F8EAD9"));
 
@@ -241,12 +423,13 @@ public class PanelSanPham extends JPanel {
 
         dialog.add(mainPanel, BorderLayout.CENTER);
 
-        // Nút đóng cửa sổ
         JButton btnDong = new JButton("Đóng");
+        btnDong.setBackground(Color.decode("#D3A875"));
+        btnDong.setForeground(Color.WHITE);
         btnDong.addActionListener(e -> dialog.dispose());
         JPanel buttonPanel = new JPanel(new FlowLayout());
-        buttonPanel.add(btnDong);
         buttonPanel.setBackground(Color.decode("#F8EAD9"));
+        buttonPanel.add(btnDong);
         dialog.add(buttonPanel, BorderLayout.SOUTH);
 
         dialog.setVisible(true);
@@ -287,7 +470,7 @@ public class PanelSanPham extends JPanel {
             sp.setHinhMinhHoa(hinhMinhHoa);
             dsSanPham.add(sp);
             dataManager.saveToFile(dsSanPham, "sanpham.dat");
-            refreshTable();
+            refreshProductGrid();
             formPanel.setVisible(false);
             clearForm();
             JOptionPane.showMessageDialog(this, "Thêm sản phẩm thành công!");
@@ -298,32 +481,20 @@ public class PanelSanPham extends JPanel {
         }
     }
 
-    private void chuanBiSuaSanPham() {
-        int row = table.getSelectedRow();
-        if (row == -1) {
-            JOptionPane.showMessageDialog(this, "Vui lòng chọn sản phẩm để sửa!");
-            return;
+    private void suaSanPham() {
+        int selectedIndex = -1;
+        String selectedMaSP = txtMaSP.getText();
+
+        // Tìm sản phẩm đang được chỉnh sửa trong danh sách
+        for (int i = 0; i < dsSanPham.size(); i++) {
+            if (dsSanPham.get(i).getMaSP().equals(selectedMaSP)) {
+                selectedIndex = i;
+                break;
+            }
         }
 
-        SanPham sp = dsSanPham.get(row);
-        txtMaSP.setText(sp.getMaSP());
-        txtTen.setText(sp.getTen());
-        txtHang.setText(sp.getHang());
-        txtGia.setText(String.valueOf(sp.getGia()));
-        txtSoLuong.setText(String.valueOf(sp.getSoLuong()));
-        txtChip.setText(sp.getChip());
-        txtSoCamera.setText(String.valueOf(sp.getSoCamera()));
-        txtDungLuongPin.setText(String.valueOf(sp.getDungLuongPin()));
-        txtKichThuocManHinh.setText(String.valueOf(sp.getKichThuocManHinh()));
-        txtHinhMinhHoa.setText(sp.getHinhMinhHoa() != null ? sp.getHinhMinhHoa() : "");
-        formPanel.setVisible(true);
-        isEditing = true;
-    }
-
-    private void suaSanPham() {
-        int row = table.getSelectedRow();
-        if (row == -1) {
-            JOptionPane.showMessageDialog(this, "Vui lòng chọn sản phẩm để sửa!");
+        if (selectedIndex == -1) {
+            JOptionPane.showMessageDialog(this, "Không tìm thấy sản phẩm để sửa!");
             return;
         }
 
@@ -343,11 +514,11 @@ public class PanelSanPham extends JPanel {
                 throw new IllegalArgumentException("Vui lòng điền đầy đủ thông tin bắt buộc!");
             }
 
-            if (dsSanPham.stream().anyMatch(sp -> sp.getMaSP().equals(maSP) && !sp.getMaSP().equals(dsSanPham.get(row).getMaSP()))) {
+            if (dsSanPham.stream().anyMatch(sp -> sp.getMaSP().equals(maSP) && !sp.getMaSP().equals(selectedMaSP))) {
                 throw new IllegalArgumentException("Mã sản phẩm đã tồn tại!");
             }
 
-            SanPham sp = dsSanPham.get(row);
+            SanPham sp = dsSanPham.get(selectedIndex);
             sp.setMaSP(maSP);
             sp.setTen(ten);
             sp.setHang(hang);
@@ -360,7 +531,7 @@ public class PanelSanPham extends JPanel {
             sp.setHinhMinhHoa(hinhMinhHoa);
 
             dataManager.saveToFile(dsSanPham, "sanpham.dat");
-            refreshTable();
+            refreshProductGrid();
             formPanel.setVisible(false);
             clearForm();
             isEditing = false;
@@ -373,8 +544,8 @@ public class PanelSanPham extends JPanel {
     }
 
     private void xoaSanPham() {
-        int row = table.getSelectedRow();
-        if (row == -1) {
+        SanPham sp = getSelectedSanPham();
+        if (sp == null) {
             JOptionPane.showMessageDialog(this, "Vui lòng chọn sản phẩm để xóa!");
             return;
         }
@@ -382,14 +553,43 @@ public class PanelSanPham extends JPanel {
         int confirm = JOptionPane.showConfirmDialog(this, "Bạn có chắc muốn xóa sản phẩm này?", "Xác nhận xóa", JOptionPane.YES_NO_OPTION);
         if (confirm == JOptionPane.YES_OPTION) {
             try {
-                dsSanPham.remove(row);
+                dsSanPham.remove(sp);
                 dataManager.saveToFile(dsSanPham, "sanpham.dat");
-                refreshTable();
+                refreshProductGrid();
                 formPanel.setVisible(false);
                 clearForm();
                 JOptionPane.showMessageDialog(this, "Xóa sản phẩm thành công!");
             } catch (IOException e) {
                 JOptionPane.showMessageDialog(this, "Lỗi khi lưu file: " + e.getMessage());
+            }
+        }
+    }
+
+    private SanPham getSelectedSanPham() {
+        for (Component comp : productPanel.getComponents()) {
+            if (comp instanceof JPanel) {
+                JPanel itemPanel = (JPanel) comp;
+                if (itemPanel.getBorder() == BorderFactory.createLineBorder(Color.BLUE)) {
+                    JLabel lblTen = (JLabel) ((JPanel) itemPanel.getComponent(1)).getComponent(0);
+                    return dsSanPham.stream()
+                            .filter(sp -> sp.getTen().equals(lblTen.getText()))
+                            .findFirst()
+                            .orElse(null);
+                }
+            }
+        }
+        return null;
+    }
+
+    private void clearSelection() {
+        for (Component comp : productPanel.getComponents()) {
+            if (comp instanceof JPanel) {
+                JPanel itemPanel = (JPanel) comp;
+                itemPanel.setBackground(Color.WHITE);
+                itemPanel.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createMatteBorder(0, 0, 2, 2, Color.decode("#D3A875")),
+                    BorderFactory.createEmptyBorder(5, 5, 5, 5)
+                ));
             }
         }
     }
@@ -404,19 +604,6 @@ public class PanelSanPham extends JPanel {
         } catch (IOException | ClassNotFoundException e) {
             return 0;
         }
-    }
-
-    private void refreshTable() {
-        String[] columns = {"Mã SP", "Tên", "Hãng", "Giá", "Số lượng", "Đã bán"};
-        Object[][] data = new Object[dsSanPham.size()][6];
-        for (int i = 0; i < dsSanPham.size(); i++) {
-            SanPham sp = dsSanPham.get(i);
-            int soLuongDaBan = tinhSoLuongDaBan(sp.getMaSP());
-            data[i] = new Object[]{sp.getMaSP(), sp.getTen(), sp.getHang(), formatPrice(sp.getGia()), sp.getSoLuong(), soLuongDaBan};
-        }
-        table.setModel(new javax.swing.table.DefaultTableModel(data, columns));
-        table.revalidate();
-        table.repaint();
     }
 
     private void clearForm() {
