@@ -3,16 +3,15 @@ package do_an_1;
 import java.io.Serializable;
 import java.time.LocalDate;
 
-public class HoaDon implements Serializable {
+public class HoaDon implements Invoice, Serializable {
     private String maHD;
     private String maKH;
-    private String maSP; // Sử dụng maSP thay vì tenSP
+    private String maSP;
     private int soLuong;
     private double tongTien;
-    private LocalDate ngayLap; // Ngày lập hóa đơn
+    private LocalDate ngayLap;
 
     public HoaDon(String maHD, String maKH, String maSP, int soLuong, double tongTien, LocalDate ngayLap) {
-        // Khởi tạo đối tượng HoaDon với các thuộc tính
         this.maHD = maHD;
         this.maKH = maKH;
         this.maSP = maSP;
@@ -21,16 +20,16 @@ public class HoaDon implements Serializable {
         this.ngayLap = ngayLap;
     }
 
-    // Getter cho mã hóa đơn
+    @Override
     public String getMaHD() { return maHD; }
-    // Getter cho mã khách hàng
+    @Override
     public String getMaKH() { return maKH; }
-    // Getter cho mã sản phẩm (tương thích với tên cũ)
+    @Override
     public String getTenSP() { return maSP; }
-    // Getter cho số lượng
+    @Override
     public int getSoLuong() { return soLuong; }
-    // Getter cho tổng tiền
+    @Override
     public double getTongTien() { return tongTien; }
-    // Getter cho ngày lập
+    @Override
     public LocalDate getNgayLap() { return ngayLap; }
 }

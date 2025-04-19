@@ -1,0 +1,30 @@
+package do_an_1;
+
+import javax.swing.*;
+import java.awt.*;
+import java.io.IOException;
+
+// Lớp trừu tượng BasePanel kế thừa từ JPanel, làm lớp cha cho các panel khác
+public abstract class BasePanel extends JPanel {
+    protected static final Color BACKGROUND_COLOR = Color.decode("#F8EAD9"); // Màu nền chung
+
+    public BasePanel() {
+        // Thiết lập các thuộc tính chung cho tất cả các panel
+        setBackground(BACKGROUND_COLOR);
+        setLayout(new BorderLayout());
+        setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+    }
+
+    // Phương thức trừu tượng để làm mới giao diện, bắt buộc các panel con phải triển khai
+    public abstract void refreshUI();
+
+    // Phương thức chung để hiển thị thông báo lỗi
+    protected void showError(String message) {
+        JOptionPane.showMessageDialog(this, message, "Lỗi", JOptionPane.ERROR_MESSAGE);
+    }
+
+    // Phương thức chung để hiển thị thông báo thành công
+    protected void showSuccess(String message) {
+        JOptionPane.showMessageDialog(this, message, "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+    }
+}

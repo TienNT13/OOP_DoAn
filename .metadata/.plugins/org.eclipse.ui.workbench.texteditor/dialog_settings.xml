@@ -4,6 +4,8 @@
 	<section name="java.lang.Class">
 		<item key="replaceBarOpen" value="false"/>
 		<list key="findhistory">
+			<item value="hiển thị chi tiết khách hàng"/>
+			<item value="hiển thị chi tiết sản phẩm"/>
 			<item value="// Panel hiển thị sản phẩm dạng lưới"/>
 			<item value="ImageIcon logoIcon"/>
 		</list>

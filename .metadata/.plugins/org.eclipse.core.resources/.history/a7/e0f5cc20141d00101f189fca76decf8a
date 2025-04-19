@@ -1,0 +1,101 @@
+package do_an_1;
+
+import javax.swing.*;
+import java.awt.*;
+import java.io.File;
+import java.io.IOException;
+import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
+
+public class PanelSanPham extends JPanel {
+    // Các thuộc tính và phương thức khác giữ nguyên, chỉ cập nhật phần hiển thị chi tiết
+
+    private void hienThiChiTietSanPham(int row) {
+        SanPham sp = dsSanPham.get(row);
+
+        JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Chi tiết sản phẩm", true);
+        dialog.setLayout(new BorderLayout());
+        dialog.setSize(600, 400);
+        dialog.setLocationRelativeTo(this);
+        dialog.getContentPane().setBackground(Color.decode("#F8EAD9"));
+
+        JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        mainPanel.setBackground(Color.decode("#F8EAD9"));
+
+        JPanel imagePanel = new JPanel();
+        imagePanel.setBackground(Color.decode("#F8EAD9"));
+        JLabel lblHinhMinhHoa = new JLabel("");
+        if (sp.getHinhMinhHoa() != null && !sp.getHinhMinhHoa().isEmpty()) {
+            try {
+                ImageIcon icon = new ImageIcon(sp.getHinhMinhHoa());
+                Image scaledImage = icon.getImage().getScaledInstance(150, 150, Image.SCALE_SMOOTH);
+                lblHinhMinhHoa.setIcon(new ImageIcon(scaledImage));
+            } catch (Exception ex) {
+                lblHinhMinhHoa.setText("Không tải được ảnh");
+            }
+        } else {
+            lblHinhMinhHoa.setText("Không có ảnh");
+        }
+        imagePanel.add(lblHinhMinhHoa);
+        mainPanel.add(imagePanel, BorderLayout.WEST);
+
+        JPanel detailPanel = new JPanel(new GridLayout(11, 2, 5, 5)); // Thêm 1 dòng cho summary
+        detailPanel.setBackground(Color.decode("#F8EAD9"));
+
+        detailPanel.add(new JLabel("Tóm tắt:"));
+        detailPanel.add(new JLabel(sp.getSummary())); // Sử dụng phương thức getSummary
+
+        detailPanel.add(new JLabel("Mã SP:"));
+        detailPanel.add(new JLabel(sp.getMaSP()));
+
+        detailPanel.add(new JLabel("Tên:"));
+        detailPanel.add(new JLabel(sp.getTen()));
+
+        detailPanel.add(new JLabel("Hãng:"));
+        detailPanel.add(new JLabel(sp.getHang()));
+
+        detailPanel.add(new JLabel("Giá:"));
+        detailPanel.add(new JLabel(formatPrice(sp.getGia())));
+
+        detailPanel.add(new JLabel("Số lượng:"));
+        detailPanel.add(new JLabel(String.valueOf(sp.getSoLuong())));
+
+        detailPanel.add(new JLabel("Số lượng đã bán:"));
+        detailPanel.add(new JLabel(String.valueOf(tinhSoLuongDaBan(sp.getMaSP()))));
+
+        detailPanel.add(new JLabel("Chip:"));
+        detailPanel.add(new JLabel(sp.getChip()));
+
+        detailPanel.add(new JLabel("Số camera:"));
+        detailPanel.add(new JLabel(String.valueOf(sp.getSoCamera())));
+
+        detailPanel.add(new JLabel("Dung lượng pin (mAh):"));
+        detailPanel.add(new JLabel(String.valueOf(sp.getDungLuongPin())));
+
+        detailPanel.add(new JLabel("Kích thước màn hình (inch):"));
+        detailPanel.add(new JLabel(String.valueOf(sp.getKichThuocManHinh())));
+
+        mainPanel.add(detailPanel, BorderLayout.CENTER);
+
+        dialog.add(mainPanel, BorderLayout.CENTER);
+
+        JButton btnDong = new JButton("Đóng");
+        btnDong.setBackground(Color.decode("#D3A875"));
+        btnDong.setForeground(Color.WHITE);
+        btnDong.addActionListener(e -> dialog.dispose());
+        JPanel buttonPanel = new JPanel(new FlowLayout());
+        buttonPanel.setBackground(Color.decode("#F8EAD9"));
+        buttonPanel.add(btnDong);
+        dialog.add(buttonPanel, BorderLayout.SOUTH);
+
+        dialog.setVisible(true);
+    }
+
+    // Các phương thức khác giữ nguyên
+    // ...
+}

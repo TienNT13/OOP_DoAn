@@ -1,0 +1,85 @@
+package do_an_1;
+
+import javax.swing.*;
+import java.awt.*;
+
+public class GiaoDienChinh extends JFrame {
+    private CardLayout cardLayout;
+    private JPanel contentPanel;
+    private JPanel buttonPanel;
+
+    private WelcomePanel welcomePanel;
+    private PanelSanPham panelSanPham;
+    private PanelKhachHang panelKhachHang;
+    private PanelHoaDon panelHoaDon;
+    private PanelThongKe panelThongKe;
+    private PanelTimKiem panelTimKiem;
+
+    public GiaoDienChinh() {
+        setTitle("Hệ thống quản lý cửa hàng bán điện thoại");
+        setSize(1200, 700);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLocationRelativeTo(null);
+        setLayout(new BorderLayout());
+
+        // Tạo CardLayout để chuyển đổi giữa các panel
+        cardLayout = new CardLayout();
+        contentPanel = new JPanel(cardLayout);
+
+        // Khởi tạo các panel
+        welcomePanel = new WelcomePanel(this::showMainPanels);
+        panelSanPham = new PanelSanPham();
+        panelKhachHang = new PanelKhachHang();
+        panelHoaDon = new PanelHoaDon();
+        panelThongKe = new PanelThongKe();
+        panelTimKiem = new PanelTimKiem();
+
+        // Thêm các panel vào contentPanel
+        contentPanel.add(welcomePanel, "Welcome");
+        contentPanel.add(panelSanPham, "SanPham");
+        contentPanel.add(panelKhachHang, "KhachHang");
+        contentPanel.add(panelHoaDon, "HoaDon");
+        contentPanel.add(panelThongKe, "ThongKe");
+        contentPanel.add(panelTimKiem, "TimKiem");
+
+        // Tạo panel chứa các nút điều hướng
+        buttonPanel = new JPanel(new FlowLayout());
+        buttonPanel.setBackground(Color.decode("#F8EAD9"));
+
+        JButton btnSanPham = new JButton("Sản phẩm");
+        btnSanPham.addActionListener(e -> cardLayout.show(contentPanel, "SanPham"));
+        JButton btnKhachHang = new JButton("Khách hàng");
+        btnKhachHang.addActionListener(e -> cardLayout.show(contentPanel, "KhachHang"));
+        JButton btnHoaDon = new JButton("Hóa đơn");
+        btnHoaDon.addActionListener(e -> cardLayout.show(contentPanel, "HoaDon"));
+        JButton btnThongKe = new JButton("Thống kê");
+        btnThongKe.addActionListener(e -> cardLayout.show(contentPanel, "ThongKe"));
+        JButton btnTimKiem = new JButton("Tìm kiếm");
+        btnTimKiem.addActionListener(e -> cardLayout.show(contentPanel, "TimKiem"));
+
+        buttonPanel.add(btnSanPham);
+        buttonPanel.add(btnKhachHang);
+        buttonPanel.add(btnHoaDon);
+        buttonPanel.add(btnThongKe);
+        buttonPanel.add(btnTimKiem);
+
+        // Thêm các thành phần vào frame
+        add(buttonPanel, BorderLayout.NORTH);
+        add(contentPanel, BorderLayout.CENTER);
+
+        // Hiển thị giao diện chào mừng ban đầu
+        cardLayout.show(contentPanel, "Welcome");
+    }
+
+    private void showMainPanels() {
+        cardLayout.show(contentPanel, "SanPham");
+        buttonPanel.setVisible(true);
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> {
+            GiaoDienChinh frame = new GiaoDienChinh();
+            frame.setVisible(true);
+        });
+    }
+}

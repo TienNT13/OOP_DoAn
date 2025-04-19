@@ -1,0 +1,10 @@
+package do_an_1;
+
+// Interface DataEntity áp dụng ảo hóa cho các lớp mô hình
+public interface DataEntity {
+    // Trả về mã định danh của đối tượng
+    String getId();
+
+    // Trả về mô tả của đối tượng
+    String getDescription();
+}

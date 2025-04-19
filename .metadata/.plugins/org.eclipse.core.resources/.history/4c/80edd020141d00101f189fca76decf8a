@@ -1,0 +1,89 @@
+package do_an_1;
+
+import javax.swing.*;
+import java.awt.*;
+import java.io.IOException;
+import java.text.DecimalFormat;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.stream.Collectors;
+
+public class PanelKhachHang extends JPanel {
+    // Các thuộc tính và phương thức khác giữ nguyên, chỉ cập nhật phần hiển thị chi tiết
+
+    private void hienThiChiTietKhachHang(int row) {
+        KhachHang kh = dsKhachHang.get(row);
+
+        JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Chi tiết khách hàng", true);
+        dialog.setLayout(new BorderLayout());
+        dialog.setSize(600, 400);
+        dialog.setLocationRelativeTo(this);
+        dialog.getContentPane().setBackground(Color.decode("#F8EAD9"));
+
+        JPanel infoPanel = new JPanel(new GridLayout(4, 2, 5, 5)); // Thêm dòng cho summary
+        infoPanel.setBackground(Color.decode("#F8EAD9"));
+        infoPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        infoPanel.add(new JLabel("Tóm tắt:"));
+        infoPanel.add(new JLabel(kh.getSummary())); // Sử dụng phương thức getSummary
+
+        infoPanel.add(new JLabel("Mã KH:"));
+        infoPanel.add(new JLabel(kh.getMaKH()));
+
+        infoPanel.add(new JLabel("Tên KH:"));
+        infoPanel.add(new JLabel(kh.getTenKH()));
+
+        infoPanel.add(new JLabel("SĐT:"));
+        infoPanel.add(new JLabel(kh.getSdt()));
+
+        // Phần lịch sử mua hàng giữ nguyên
+        JPanel historyPanel = new JPanel(new BorderLayout());
+        historyPanel.setBackground(Color.decode("#F8EAD9"));
+        historyPanel.setBorder(BorderFactory.createTitledBorder("Lịch sử mua hàng"));
+
+        List<HoaDon> lichSuMuaHang;
+        try {
+            lichSuMuaHang = hoaDonDataManager.loadFromFile("hoadon.dat").stream()
+                    .filter(hd -> hd.getMaKH().equals(kh.getMaKH()))
+                    .collect(Collectors.toList());
+        } catch (IOException | ClassNotFoundException e) {
+            lichSuMuaHang = new ArrayList<>();
+            JOptionPane.showMessageDialog(this, "Lỗi khi đọc file hóa đơn: " + e.getMessage());
+        }
+
+        String[] columns = {"Mã HD", "Mã SP", "Số lượng", "Tổng tiền", "Ngày lập"};
+        Object[][] data = new Object[lichSuMuaHang.size()][5];
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        DecimalFormat priceFormatter = new DecimalFormat("#,### VND");
+        for (int i = 0; i < lichSuMuaHang.size(); i++) {
+            HoaDon hd = lichSuMuaHang.get(i);
+            data[i] = new Object[]{hd.getMaHD(), hd.getTenSP(), hd.getSoLuong(), priceFormatter.format(hd.getTongTien()), hd.getNgayLap().format(formatter)};
+        }
+
+        JTable historyTable = new JTable(data, columns);
+        historyTable.setFillsViewportHeight(true);
+        JScrollPane historyScrollPane = new JScrollPane(historyTable);
+        historyPanel.add(historyScrollPane, BorderLayout.CENTER);
+
+        JPanel mainPanel = new JPanel(new BorderLayout());
+        mainPanel.setBackground(Color.decode("#F8EAD9"));
+        mainPanel.add(infoPanel, BorderLayout.NORTH);
+        mainPanel.add(historyPanel, BorderLayout.CENTER);
+
+        dialog.add(mainPanel, BorderLayout.CENTER);
+
+        JButton btnDong = new JButton("Đóng");
+        btnDong.addActionListener(e -> dialog.dispose());
+        JPanel buttonPanel = new JPanel(new FlowLayout());
+        buttonPanel.setBackground(Color.decode("#F8EAD9"));
+        buttonPanel.add(btnDong);
+        dialog.add(buttonPanel, BorderLayout.SOUTH);
+
+        dialog.setVisible(true);
+    }
+
+    // Các phương thức khác giữ nguyên
+    // ...
+}

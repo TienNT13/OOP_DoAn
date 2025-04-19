@@ -1,0 +1,662 @@
+package do_an_1;
+
+import javax.swing.*;
+import java.awt.*;
+import java.io.IOException;
+import java.text.DecimalFormat;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
+public class PanelHoaDon extends JPanel {
+    private List<HoaDon> dsHoaDon; // Danh sách hóa đơn
+    private JTable table, tempTable; // Bảng hiển thị hóa đơn và bảng tạm hiển thị sản phẩm
+    private JTextField txtMaHD, txtMaKH, txtMaSP, txtSoLuong; // Các trường nhập liệu
+    private JButton btnThemSP, btnXoaSP, btnXacNhanHD, btnSuaHD, btnXoaHD; // Các nút điều khiển
+    private DataManager<HoaDon> dataManager; // Quản lý lưu trữ hóa đơn
+    private DataManager<SanPham> spDataManager; // Quản lý lưu trữ sản phẩm
+    private DataManager<KhachHang> khDataManager; // Quản lý lưu trữ khách hàng
+    private List<Object[]> tempSanPham; // Danh sách sản phẩm tạm trong hóa đơn
+
+    // Định dạng giá tiền với dấu phẩy và đơn vị VND
+    private String formatPrice(double price) {
+        DecimalFormat formatter = new DecimalFormat("#,###");
+        return formatter.format(price) + " VND";
+    }
+
+    // Tạo mã hóa đơn mới theo định dạng HDxxx
+    private String generateMaHD() {
+        int maxCount = dsHoaDon.stream()
+                .map(HoaDon::getMaHD)
+                .filter(maHD -> maHD != null && maHD.startsWith("HD"))
+                .map(maHD -> {
+                    try {
+                        return Integer.parseInt(maHD.substring(2));
+                    } catch (NumberFormatException e) {
+                        return 0;
+                    }
+                })
+                .max(Integer::compare)
+                .orElse(0);
+        return String.format("HD%03d", maxCount + 1);
+    }
+
+    public PanelHoaDon() {
+        // Thiết lập giao diện cơ bản cho panel
+        setBackground(Color.decode("#F8EAD9"));
+        setLayout(new BorderLayout());
+        setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        // Khởi tạo các đối tượng quản lý dữ liệu
+        dataManager = new FileDataManager<>();
+        spDataManager = new FileDataManager<>();
+        khDataManager = new FileDataManager<>();
+        dsHoaDon = new ArrayList<>();
+        tempSanPham = new ArrayList<>();
+
+        // Tải danh sách hóa đơn từ file
+        try {
+            dsHoaDon = dataManager.loadFromFile("hoadon.dat");
+        } catch (IOException | ClassNotFoundException e) {
+            JOptionPane.showMessageDialog(this, "Lỗi khi đọc file hóa đơn: " + e.getMessage());
+        }
+
+        // Tạo bảng hiển thị tất cả hóa đơn
+        String[] columns = {"Mã HD", "Tên KH", "Tổng tiền", "Ngày lập"};
+        Object[][] data = new Object[0][4];
+        table = new JTable(data, columns);
+        table.setFillsViewportHeight(true);
+        JScrollPane tableScrollPane = new JScrollPane(table);
+        tableScrollPane.setBorder(BorderFactory.createTitledBorder("Danh sách hóa đơn đã xác nhận"));
+        add(tableScrollPane, BorderLayout.CENTER);
+        refreshTable();
+
+        // Tạo form nhập liệu
+        JPanel formPanel = new JPanel(new BorderLayout());
+        formPanel.setBackground(Color.decode("#F8EAD9"));
+
+        // Panel thông tin hóa đơn
+        JPanel infoPanel = new JPanel(new GridLayout(2, 2, 5, 5));
+        infoPanel.setBackground(Color.decode("#F8EAD9"));
+        infoPanel.add(new JLabel("Mã HD:"));
+        txtMaHD = new JTextField(generateMaHD());
+        txtMaHD.setEditable(false);
+        infoPanel.add(txtMaHD);
+        infoPanel.add(new JLabel("Mã KH:"));
+        txtMaKH = new JTextField();
+        infoPanel.add(txtMaKH);
+
+        // Panel thêm sản phẩm
+        JPanel spPanel = new JPanel(new GridLayout(4, 2, 5, 5));
+        spPanel.setBackground(Color.decode("#F8EAD9"));
+        spPanel.setBorder(BorderFactory.createTitledBorder("Thêm sản phẩm"));
+        spPanel.add(new JLabel("Mã SP:"));
+        txtMaSP = new JTextField();
+        spPanel.add(txtMaSP);
+        spPanel.add(new JLabel("Số lượng:"));
+        txtSoLuong = new JTextField();
+        spPanel.add(txtSoLuong);
+        btnThemSP = new JButton("Thêm SP");
+        btnThemSP.addActionListener(e -> themSanPhamTam());
+        spPanel.add(btnThemSP);
+        btnXoaSP = new JButton("Xóa SP");
+        btnXoaSP.addActionListener(e -> xoaSanPhamTam());
+        spPanel.add(btnXoaSP);
+
+        // Tạo bảng tạm hiển thị sản phẩm với cột Tên SP
+        String[] tempColumns = {"Mã SP", "Tên SP", "Số lượng", "Giá", "Thành tiền"};
+        Object[][] tempData = new Object[0][5];
+        tempTable = new JTable(tempData, tempColumns);
+        JScrollPane tempScrollPane = new JScrollPane(tempTable);
+        tempScrollPane.setBorder(BorderFactory.createTitledBorder("Sản phẩm trong hóa đơn"));
+
+        // Panel nút điều khiển hóa đơn
+        JPanel buttonPanel = new JPanel(new FlowLayout());
+        buttonPanel.setBackground(Color.decode("#F8EAD9"));
+        btnXacNhanHD = new JButton("Xác nhận hóa đơn");
+        btnXacNhanHD.addActionListener(e -> xacNhanHoaDon());
+        buttonPanel.add(btnXacNhanHD);
+        btnSuaHD = new JButton("Sửa hóa đơn");
+        btnSuaHD.addActionListener(e -> suaHoaDon());
+        buttonPanel.add(btnSuaHD);
+        btnXoaHD = new JButton("Xóa hóa đơn");
+        btnXoaHD.addActionListener(e -> xoaHoaDon());
+        buttonPanel.add(btnXoaHD);
+
+        // Thêm các panel vào form
+        formPanel.add(infoPanel, BorderLayout.NORTH);
+        formPanel.add(spPanel, BorderLayout.CENTER);
+        formPanel.add(tempScrollPane, BorderLayout.SOUTH);
+        formPanel.add(buttonPanel, BorderLayout.EAST);
+        add(formPanel, BorderLayout.NORTH);
+
+        // Xử lý sự kiện click vào bảng hóa đơn để hiển thị chi tiết
+        table.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                int row = table.rowAtPoint(e.getPoint());
+                if (row != -1) {
+                    hienThiChiTietHoaDon(row);
+                }
+            }
+        });
+
+        // Xử lý sự kiện chọn hàng trong bảng để sửa
+        table.getSelectionModel().addListSelectionListener(e -> {
+            int row = table.getSelectedRow();
+            if (row != -1 && !e.getValueIsAdjusting()) {
+                String maHD = (String) table.getValueAt(row, 0);
+                List<HoaDon> hds = dsHoaDon.stream().filter(h -> h.getMaHD().equals(maHD)).toList();
+                if (!hds.isEmpty()) {
+                    txtMaHD.setText(maHD);
+                    txtMaKH.setText(hds.get(0).getMaKH());
+                    tempSanPham.clear();
+                    try {
+                        List<SanPham> dsSanPham = spDataManager.loadFromFile("sanpham.dat");
+                        for (HoaDon hd : hds) {
+                            String maSP = hd.getTenSP();
+                            SanPham sp = dsSanPham.stream()
+                                    .filter(p -> p.getMaSP().equals(maSP))
+                                    .findFirst()
+                                    .orElse(null);
+                            String tenSP = sp != null ? sp.getTen() : maSP; // Lấy tên sản phẩm
+                            double gia = sp != null ? sp.getGia() : hd.getTongTien() / hd.getSoLuong();
+                            tempSanPham.add(new Object[]{maSP, tenSP, hd.getSoLuong(), formatPrice(gia), formatPrice(hd.getTongTien())});
+                        }
+                        refreshTempTable();
+                    } catch (IOException | ClassNotFoundException ex) {
+                        JOptionPane.showMessageDialog(this, "Lỗi khi đọc file sản phẩm: " + ex.getMessage());
+                    }
+                }
+            }
+        });
+    }
+
+    // Thêm sản phẩm tạm vào hóa đơn
+    private void themSanPhamTam() {
+        try {
+            String maSP = txtMaSP.getText().trim();
+            String soLuongStr = txtSoLuong.getText().trim();
+
+            // Kiểm tra mã sản phẩm không rỗng
+            if (maSP.isEmpty()) {
+                throw new IllegalArgumentException("Vui lòng điền mã SP!");
+            }
+
+            // Kiểm tra số lượng là số nguyên
+            int soLuong;
+            try {
+                soLuong = Integer.parseInt(soLuongStr);
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("Số lượng phải là số nguyên!");
+            }
+
+            // Kiểm tra số lượng phải lớn hơn 0
+            if (soLuong <= 0) {
+                throw new IllegalArgumentException("Hãy nhập số lượng sản phẩm lớn hơn 0");
+            }
+
+            // Tải danh sách sản phẩm từ file
+            List<SanPham> dsSanPham = spDataManager.loadFromFile("sanpham.dat");
+            SanPham sp = dsSanPham.stream()
+                    .filter(p -> p.getMaSP().equals(maSP))
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalArgumentException("Mã sản phẩm không tồn tại!"));
+
+            // Kiểm tra số lượng tồn kho
+            if (sp.getSoLuong() < soLuong) {
+                throw new IllegalArgumentException("Số lượng vượt quá tồn kho! Còn lại: " + sp.getSoLuong());
+            }
+
+            // Kiểm tra sản phẩm đã được thêm chưa
+            for (Object[] item : tempSanPham) {
+                if (item[0].equals(maSP)) {
+                    throw new IllegalArgumentException("Sản phẩm đã được thêm, vui lòng chọn sản phẩm khác!");
+                }
+            }
+
+            // Thêm sản phẩm vào danh sách tạm, bao gồm tên sản phẩm
+            double gia = sp.getGia();
+            double thanhTien = gia * soLuong;
+            tempSanPham.add(new Object[]{maSP, sp.getTen(), soLuong, formatPrice(gia), formatPrice(thanhTien)});
+            refreshTempTable();
+            txtMaSP.setText("");
+            txtSoLuong.setText("");
+        } catch (IOException | ClassNotFoundException e) {
+            JOptionPane.showMessageDialog(this, "Lỗi khi đọc file: " + e.getMessage());
+        } catch (IllegalArgumentException e) {
+            JOptionPane.showMessageDialog(this, e.getMessage());
+        }
+    }
+
+    // Xóa sản phẩm tạm khỏi hóa đơn
+    private void xoaSanPhamTam() {
+        int row = tempTable.getSelectedRow();
+        if (row == -1) {
+            JOptionPane.showMessageDialog(this, "Vui lòng chọn sản phẩm để xóa!");
+            return;
+        }
+        tempSanPham.remove(row);
+        refreshTempTable();
+        JOptionPane.showMessageDialog(this, "Xóa sản phẩm thành công!");
+    }
+
+    // Xác nhận và lưu hóa đơn
+    private void xacNhanHoaDon() {
+        try {
+            String maHD = txtMaHD.getText().trim();
+            String maKH = txtMaKH.getText().trim();
+
+            // Kiểm tra mã khách hàng không rỗng
+            if (maKH.isEmpty()) {
+                throw new IllegalArgumentException("Vui lòng nhập mã khách hàng!");
+            }
+
+            // Kiểm tra danh sách sản phẩm tạm không rỗng
+            if (tempSanPham.isEmpty()) {
+                throw new IllegalArgumentException("Vui lòng thêm ít nhất một sản phẩm!");
+            }
+
+            // Kiểm tra mã khách hàng tồn tại
+            List<KhachHang> dsKhachHang = khDataManager.loadFromFile("khachhang.dat");
+            if (dsKhachHang.stream().noneMatch(kh -> kh.getMaKH().equals(maKH))) {
+                throw new IllegalArgumentException("Mã khách hàng không tồn tại!");
+            }
+
+            // Xóa các bản ghi cũ nếu mã HD đã tồn tại
+            dsHoaDon.removeIf(hd -> hd.getMaHD().equals(maHD));
+
+            // Tạo hóa đơn mới và cập nhật tồn kho
+            double tongTien = 0;
+            List<SanPham> dsSanPham = spDataManager.loadFromFile("sanpham.dat");
+            List<HoaDon> newHDs = new ArrayList<>();
+            for (Object[] item : tempSanPham) {
+                String maSP = (String) item[0];
+                int soLuong = (int) item[2]; // Lấy số lượng từ cột thứ 3
+                SanPham sp = dsSanPham.stream()
+                        .filter(p -> p.getMaSP().equals(maSP))
+                        .findFirst()
+                        .orElseThrow(() -> new IllegalArgumentException("Mã sản phẩm không hợp lệ!"));
+                tongTien += sp.getGia() * soLuong;
+                sp.setSoLuong(sp.getSoLuong() - soLuong);
+
+                HoaDon hd = new HoaDon(maHD, maKH, maSP, soLuong, sp.getGia() * soLuong, LocalDate.now());
+                newHDs.add(hd);
+                dsHoaDon.add(hd);
+            }
+
+            // Lưu dữ liệu vào file
+            spDataManager.saveToFile(dsSanPham, "sanpham.dat");
+            dataManager.saveToFile(dsHoaDon, "hoadon.dat");
+            refreshTable();
+
+            // Hiển thị hóa đơn tổng
+            hienThiHoaDonTong(maHD, maKH, newHDs, tongTien);
+
+            // Xóa dữ liệu tạm và làm mới form
+            tempSanPham.clear();
+            refreshTempTable();
+            txtMaHD.setText(generateMaHD());
+            txtMaKH.setText("");
+            txtMaSP.setText("");
+            txtSoLuong.setText("");
+            JOptionPane.showMessageDialog(this, "Thêm hóa đơn thành công!");
+        } catch (IOException | ClassNotFoundException e) {
+            JOptionPane.showMessageDialog(this, "Lỗi khi lưu file: " + e.getMessage());
+        } catch (IllegalArgumentException e) {
+            JOptionPane.showMessageDialog(this, e.getMessage());
+        }
+    }
+
+    // Hiển thị dialog chi tiết hóa đơn tổng
+    private void hienThiHoaDonTong(String maHD, String maKH, List<HoaDon> hds, double tongTien) {
+        JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Hóa đơn tổng", true);
+        dialog.setLayout(new BorderLayout());
+        dialog.setSize(600, 400);
+        dialog.setLocationRelativeTo(this);
+        dialog.getContentPane().setBackground(Color.decode("#F8EAD9"));
+
+        JPanel infoPanel = new JPanel(new GridLayout(4, 2, 5, 5));
+        infoPanel.setBackground(Color.decode("#F8EAD9"));
+        infoPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        infoPanel.add(new JLabel("Tóm tắt:"));
+        infoPanel.add(new JLabel(hds.isEmpty() ? "Không có dữ liệu" : hds.get(0).getSummary())); // Sử dụng getSummary
+
+        infoPanel.add(new JLabel("Mã HD:"));
+        infoPanel.add(new JLabel(maHD));
+
+        String tenKH = maKH;
+        try {
+            List<KhachHang> dsKhachHang = khDataManager.loadFromFile("khachhang.dat");
+            tenKH = dsKhachHang.stream()
+                    .filter(kh -> kh.getMaKH().equals(maKH))
+                    .findFirst()
+                    .map(KhachHang::getTenKH)
+                    .orElse(maKH);
+        } catch (IOException | ClassNotFoundException e) {
+            JOptionPane.showMessageDialog(this, "Lỗi khi đọc file khách hàng: " + e.getMessage());
+        }
+        infoPanel.add(new JLabel("Tên KH:"));
+        infoPanel.add(new JLabel(tenKH));
+
+        infoPanel.add(new JLabel("Ngày lập:"));
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        String ngayLap = hds.isEmpty() ? "" : hds.get(0).getNgayLap().format(formatter);
+        infoPanel.add(new JLabel(ngayLap));
+
+        JPanel spPanel = new JPanel(new BorderLayout());
+        spPanel.setBackground(Color.decode("#F8EAD9"));
+        spPanel.setBorder(BorderFactory.createTitledBorder("Danh sách sản phẩm"));
+
+        String[] columns = {"Mã SP", "Tên SP", "Số lượng", "Giá", "Thành tiền"};
+        Object[][] data = new Object[hds.size()][5];
+        try {
+            List<SanPham> dsSanPham = spDataManager.loadFromFile("sanpham.dat");
+            for (int i = 0; i < hds.size(); i++) {
+                HoaDon hd = hds.get(i);
+                String maSP = hd.getTenSP();
+                SanPham sp = dsSanPham.stream()
+                        .filter(p -> p.getMaSP().equals(maSP))
+                        .findFirst()
+                        .orElse(null);
+                String tenSP = sp != null ? sp.getTen() : maSP;
+                double gia = sp != null ? sp.getGia() : hd.getTongTien() / hd.getSoLuong();
+                data[i] = new Object[]{maSP, tenSP, hd.getSoLuong(), formatPrice(gia), formatPrice(hd.getTongTien())};
+            }
+        } catch (IOException | ClassNotFoundException e) {
+            JOptionPane.showMessageDialog(this, "Lỗi khi đọc file sản phẩm: " + e.getMessage());
+        }
+
+        JTable spTable = new JTable(data, columns);
+        spTable.setFillsViewportHeight(true);
+        JScrollPane spScrollPane = new JScrollPane(spTable);
+        spPanel.add(spScrollPane, BorderLayout.CENTER);
+
+        JLabel lblTongTien = new JLabel("Tổng tiền: " + formatPrice(tongTien));
+        lblTongTien.setHorizontalAlignment(SwingConstants.RIGHT);
+        spPanel.add(lblTongTien, BorderLayout.SOUTH);
+
+        JPanel mainPanel = new JPanel(new BorderLayout());
+        mainPanel.setBackground(Color.decode("#F8EAD9"));
+        mainPanel.add(infoPanel, BorderLayout.NORTH);
+        mainPanel.add(spPanel, BorderLayout.CENTER);
+        dialog.add(mainPanel, BorderLayout.CENTER);
+
+        JButton btnDong = new JButton("Đóng");
+        btnDong.addActionListener(e -> dialog.dispose());
+        JPanel buttonPanel = new JPanel(new FlowLayout());
+        buttonPanel.setBackground(Color.decode("#F8EAD9"));
+        buttonPanel.add(btnDong);
+        dialog.add(buttonPanel, BorderLayout.SOUTH);
+
+        dialog.setVisible(true);
+    }
+
+    // Sửa hóa đơn đã chọn
+    private void suaHoaDon() {
+        int row = table.getSelectedRow();
+        if (row == -1) {
+            JOptionPane.showMessageDialog(this, "Vui lòng chọn hóa đơn để sửa!");
+            return;
+        }
+
+        try {
+            String maHD = txtMaHD.getText().trim();
+            String maKH = txtMaKH.getText().trim();
+
+            // Kiểm tra mã khách hàng không rỗng
+            if (maKH.isEmpty()) {
+                throw new IllegalArgumentException("Vui lòng nhập mã khách hàng!");
+            }
+
+            // Kiểm tra danh sách sản phẩm tạm không rỗng
+            if (tempSanPham.isEmpty()) {
+                throw new IllegalArgumentException("Vui lòng thêm ít nhất một sản phẩm!");
+            }
+
+            // Kiểm tra mã khách hàng tồn tại
+            List<KhachHang> dsKhachHang = khDataManager.loadFromFile("khachhang.dat");
+            if (dsKhachHang.stream().noneMatch(kh -> kh.getMaKH().equals(maKH))) {
+                throw new IllegalArgumentException("Mã khách hàng không tồn tại!");
+            }
+
+            // Hoàn tồn kho cho các sản phẩm cũ
+            List<SanPham> dsSanPham = spDataManager.loadFromFile("sanpham.dat");
+            List<HoaDon> oldHDs = dsHoaDon.stream().filter(h -> h.getMaHD().equals(maHD)).toList();
+            for (HoaDon hd : oldHDs) {
+                String maSP = hd.getTenSP();
+                int soLuong = hd.getSoLuong();
+                dsSanPham.stream()
+                        .filter(p -> p.getMaSP().equals(maSP))
+                        .findFirst()
+                        .ifPresent(sp -> sp.setSoLuong(sp.getSoLuong() + soLuong));
+            }
+
+            // Xóa các bản ghi cũ
+            dsHoaDon.removeIf(hd -> hd.getMaHD().equals(maHD));
+
+            // Thêm các bản ghi mới và cập nhật tồn kho
+            double tongTien = 0;
+            List<HoaDon> newHDs = new ArrayList<>();
+            for (Object[] item : tempSanPham) {
+                String maSP = (String) item[0];
+                int soLuong = (int) item[2]; // Lấy số lượng từ cột thứ 3
+                SanPham sp = dsSanPham.stream()
+                        .filter(p -> p.getMaSP().equals(maSP))
+                        .findFirst()
+                        .orElseThrow(() -> new IllegalArgumentException("Mã sản phẩm không hợp lệ!"));
+                if (sp.getSoLuong() < soLuong) {
+                    throw new IllegalArgumentException("Số lượng vượt quá tồn kho! Còn lại: " + sp.getSoLuong());
+                }
+                tongTien += sp.getGia() * soLuong;
+                sp.setSoLuong(sp.getSoLuong() - soLuong);
+
+                HoaDon hd = new HoaDon(maHD, maKH, maSP, soLuong, sp.getGia() * soLuong, LocalDate.now());
+                newHDs.add(hd);
+                dsHoaDon.add(hd);
+            }
+
+            // Lưu dữ liệu vào file
+            spDataManager.saveToFile(dsSanPham, "sanpham.dat");
+            dataManager.saveToFile(dsHoaDon, "hoadon.dat");
+            refreshTable();
+
+            // Hiển thị hóa đơn tổng sau khi sửa
+            hienThiHoaDonTong(maHD, maKH, newHDs, tongTien);
+
+            // Xóa dữ liệu tạm và làm mới form
+            tempSanPham.clear();
+            refreshTempTable();
+            txtMaHD.setText(generateMaHD());
+            txtMaKH.setText("");
+            txtMaSP.setText("");
+            txtSoLuong.setText("");
+            JOptionPane.showMessageDialog(this, "Sửa hóa đơn thành công!");
+        } catch (IOException | ClassNotFoundException e) {
+            JOptionPane.showMessageDialog(this, "Lỗi khi lưu file: " + e.getMessage());
+        } catch (IllegalArgumentException e) {
+            JOptionPane.showMessageDialog(this, e.getMessage());
+        }
+    }
+
+    // Xóa hóa đơn đã chọn
+    private void xoaHoaDon() {
+        int row = table.getSelectedRow();
+        if (row == -1) {
+            JOptionPane.showMessageDialog(this, "Vui lòng chọn hóa đơn để xóa!");
+            return;
+        }
+
+        // Xác nhận xóa hóa đơn
+        int confirm = JOptionPane.showConfirmDialog(this, "Bạn có chắc muốn xóa hóa đơn này?", "Xác nhận xóa", JOptionPane.YES_NO_OPTION);
+        if (confirm == JOptionPane.YES_OPTION) {
+            try {
+                String maHD = (String) table.getValueAt(row, 0);
+                List<HoaDon> hds = dsHoaDon.stream().filter(h -> h.getMaHD().equals(maHD)).toList();
+
+                // Hoàn tồn kho cho các sản phẩm
+                List<SanPham> dsSanPham = spDataManager.loadFromFile("sanpham.dat");
+                for (HoaDon hd : hds) {
+                    String maSP = hd.getTenSP();
+                    int soLuong = hd.getSoLuong();
+                    dsSanPham.stream()
+                            .filter(p -> p.getMaSP().equals(maSP))
+                            .findFirst()
+                            .ifPresent(sp -> sp.setSoLuong(sp.getSoLuong() + soLuong));
+                }
+
+                // Xóa hóa đơn khỏi danh sách
+                dsHoaDon.removeIf(hd -> hd.getMaHD().equals(maHD));
+                spDataManager.saveToFile(dsSanPham, "sanpham.dat");
+                dataManager.saveToFile(dsHoaDon, "hoadon.dat");
+                refreshTable();
+                tempSanPham.clear();
+                refreshTempTable();
+                txtMaHD.setText(generateMaHD());
+                txtMaKH.setText("");
+                txtMaSP.setText("");
+                txtSoLuong.setText("");
+                JOptionPane.showMessageDialog(this, "Xóa hóa đơn thành công!");
+            } catch (IOException | ClassNotFoundException e) {
+                JOptionPane.showMessageDialog(this, "Lỗi khi lưu file: " + e.getMessage());
+            }
+        }
+    }
+
+    // Hiển thị dialog chi tiết hóa đơn
+    private void hienThiChiTietHoaDon(int row) {
+        String maHD = (String) table.getValueAt(row, 0);
+
+        JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Chi tiết hóa đơn", true);
+        dialog.setLayout(new BorderLayout());
+        dialog.setSize(600, 400);
+        dialog.setLocationRelativeTo(this);
+        dialog.getContentPane().setBackground(Color.decode("#F8EAD9"));
+
+        JPanel infoPanel = new JPanel(new GridLayout(5, 2, 5, 5)); // Thêm dòng cho summary
+        infoPanel.setBackground(Color.decode("#F8EAD9"));
+        infoPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        List<HoaDon> chiTietHD = dsHoaDon.stream()
+                .filter(h -> h.getMaHD().equals(maHD))
+                .collect(Collectors.toList());
+        String maKH = chiTietHD.isEmpty() ? "" : chiTietHD.get(0).getMaKH();
+        String tenKH = maKH;
+        try {
+            List<KhachHang> dsKhachHang = khDataManager.loadFromFile("khachhang.dat");
+            tenKH = dsKhachHang.stream()
+                    .filter(kh -> kh.getMaKH().equals(maKH))
+                    .findFirst()
+                    .map(KhachHang::getTenKH)
+                    .orElse(maKH);
+        } catch (IOException | ClassNotFoundException e) {
+            JOptionPane.showMessageDialog(this, "Lỗi khi đọc file khách hàng: " + e.getMessage());
+        }
+
+        infoPanel.add(new JLabel("Tóm tắt:"));
+        infoPanel.add(new JLabel(chiTietHD.isEmpty() ? "Không có dữ liệu" : chiTietHD.get(0).getSummary())); // Sử dụng getSummary
+
+        infoPanel.add(new JLabel("Mã HD:"));
+        infoPanel.add(new JLabel(maHD));
+
+        infoPanel.add(new JLabel("Mã KH:"));
+        infoPanel.add(new JLabel(maKH));
+
+        infoPanel.add(new JLabel("Tên KH:"));
+        infoPanel.add(new JLabel(tenKH));
+
+        infoPanel.add(new JLabel("Ngày lập:"));
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        String ngayLap = chiTietHD.isEmpty() ? "" : chiTietHD.get(0).getNgayLap().format(formatter);
+        infoPanel.add(new JLabel(ngayLap));
+
+        JPanel spPanel = new JPanel(new BorderLayout());
+        spPanel.setBackground(Color.decode("#F8EAD9"));
+        spPanel.setBorder(BorderFactory.createTitledBorder("Danh sách sản phẩm"));
+
+        String[] columns = {"Mã SP", "Tên SP", "Số lượng", "Giá", "Thành tiền"};
+        Object[][] data = new Object[chiTietHD.size()][5];
+        try {
+            List<SanPham> dsSanPham = spDataManager.loadFromFile("sanpham.dat");
+            for (int i = 0; i < chiTietHD.size(); i++) {
+                HoaDon hd = chiTietHD.get(i);
+                String maSP = hd.getTenSP();
+                SanPham sp = dsSanPham.stream()
+                        .filter(p -> p.getMaSP().equals(maSP))
+                        .findFirst()
+                        .orElse(null);
+                String tenSP = sp != null ? sp.getTen() : maSP;
+                double gia = sp != null ? sp.getGia() : hd.getTongTien() / hd.getSoLuong();
+                data[i] = new Object[]{maSP, tenSP, hd.getSoLuong(), formatPrice(gia), formatPrice(hd.getTongTien())};
+            }
+        } catch (IOException | ClassNotFoundException e) {
+            JOptionPane.showMessageDialog(this, "Lỗi khi đọc file sản phẩm: " + e.getMessage());
+        }
+
+        JTable spTable = new JTable(data, columns);
+        spTable.setFillsViewportHeight(true);
+        JScrollPane spScrollPane = new JScrollPane(spTable);
+        spPanel.add(spScrollPane, BorderLayout.CENTER);
+
+        double tongTien = chiTietHD.stream().mapToDouble(HoaDon::getTongTien).sum();
+        JLabel lblTongTien = new JLabel("Tổng tiền: " + formatPrice(tongTien));
+        lblTongTien.setHorizontalAlignment(SwingConstants.RIGHT);
+        spPanel.add(lblTongTien, BorderLayout.SOUTH);
+
+        JPanel mainPanel = new JPanel(new BorderLayout());
+        mainPanel.setBackground(Color.decode("#F8EAD9"));
+        mainPanel.add(infoPanel, BorderLayout.NORTH);
+        mainPanel.add(spPanel, BorderLayout.CENTER);
+        dialog.add(mainPanel, BorderLayout.CENTER);
+
+        JButton btnDong = new JButton("Đóng");
+        btnDong.addActionListener(e -> dialog.dispose());
+        JPanel buttonPanel = new JPanel(new FlowLayout());
+        buttonPanel.setBackground(Color.decode("#F8EAD9"));
+        buttonPanel.add(btnDong);
+        dialog.add(buttonPanel, BorderLayout.SOUTH);
+
+        dialog.setVisible(true);
+    }
+
+    // Làm mới bảng hiển thị hóa đơn
+    private void refreshTable() {
+        String[] columns = {"Mã HD", "Tên KH", "Tổng tiền", "Ngày lập"};
+        int size = (int) dsHoaDon.stream().map(HoaDon::getMaHD).distinct().count();
+        Object[][] data = new Object[size][4];
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        int index = 0;
+        try {
+            List<KhachHang> dsKhachHang = khDataManager.loadFromFile("khachhang.dat");
+            for (String maHD : dsHoaDon.stream().map(HoaDon::getMaHD).distinct().toList()) {
+                List<HoaDon> hds = dsHoaDon.stream().filter(h -> h.getMaHD().equals(maHD)).toList();
+                double tongTien = hds.stream().mapToDouble(HoaDon::getTongTien).sum();
+                String maKH = hds.get(0).getMaKH();
+                String tenKH = dsKhachHang.stream()
+                        .filter(kh -> kh.getMaKH().equals(maKH))
+                        .findFirst()
+                        .map(KhachHang::getTenKH)
+                        .orElse(maKH);
+                data[index] = new Object[]{maHD, tenKH, formatPrice(tongTien), hds.get(0).getNgayLap().format(formatter)};
+                index++;
+            }
+        } catch (IOException | ClassNotFoundException e) {
+            JOptionPane.showMessageDialog(this, "Lỗi khi đọc file khách hàng: " + e.getMessage());
+        }
+        table.setModel(new javax.swing.table.DefaultTableModel(data, columns));
+        table.revalidate();
+        table.repaint();
+    }
+
+    // Làm mới bảng tạm hiển thị sản phẩm
+    private void refreshTempTable() {
+        String[] columns = {"Mã SP", "Tên SP", "Số lượng", "Giá", "Thành tiền"};
+        Object[][] data = tempSanPham.toArray(new Object[0][0]);
+        tempTable.setModel(new javax.swing.table.DefaultTableModel(data, columns));
+        tempTable.revalidate();
+        tempTable.repaint();
+    }
+}

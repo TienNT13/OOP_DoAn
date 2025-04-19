@@ -1,0 +1,404 @@
+package do_an_1;
+
+import javax.swing.*;
+import java.awt.*;
+import java.io.IOException;
+import java.text.DecimalFormat;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
+public class PanelTimKiem extends JPanel {
+    private List<SanPham> dsSanPham; // Danh sách sản phẩm
+    private List<KhachHang> dsKhachHang; // Danh sách khách hàng
+    private List<HoaDon> dsHoaDon; // Danh sách hóa đơn
+    private JTable table; // Bảng hiển thị kết quả tìm kiếm
+    private JTextField txtSearch; // Trường nhập từ khóa tìm kiếm
+    private JComboBox<String> cbType; // ComboBox chọn loại dữ liệu để tìm kiếm
+    private DataManager<SanPham> spDataManager; // Quản lý lưu trữ dữ liệu sản phẩm
+    private DataManager<KhachHang> khDataManager; // Quản lý lưu trữ dữ liệu khách hàng
+    private DataManager<HoaDon> hdDataManager; // Quản lý lưu trữ dữ liệu hóa đơn
+
+    // Định dạng giá tiền với dấu phẩy và đơn vị VND
+    private String formatPrice(double price) {
+        DecimalFormat formatter = new DecimalFormat("#,###");
+        return formatter.format(price) + " VND";
+    }
+
+    public PanelTimKiem() {
+        // Khởi tạo các đối tượng quản lý dữ liệu
+        spDataManager = new FileDataManager<>();
+        khDataManager = new FileDataManager<>();
+        hdDataManager = new FileDataManager<>();
+
+        // Khởi tạo danh sách dữ liệu
+        dsSanPham = new ArrayList<>();
+        dsKhachHang = new ArrayList<>();
+        dsHoaDon = new ArrayList<>();
+
+        // Tải dữ liệu từ file
+        try {
+            dsSanPham = spDataManager.loadFromFile("sanpham.dat");
+            dsKhachHang = khDataManager.loadFromFile("khachhang.dat");
+            dsHoaDon = hdDataManager.loadFromFile("hoadon.dat");
+        } catch (IOException | ClassNotFoundException e) {
+            JOptionPane.showMessageDialog(this, "Lỗi khi đọc file: " + e.getMessage());
+        }
+
+        // Thiết lập giao diện cơ bản cho panel
+        setLayout(new BorderLayout());
+        setBackground(Color.decode("#F8EAD9")); // Đặt màu nền
+        setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10)); // Thêm viền trống
+
+        // Tạo form tìm kiếm
+        JPanel searchPanel = new JPanel(new FlowLayout());
+        searchPanel.setBackground(Color.decode("#F8EAD9"));
+        searchPanel.add(new JLabel("Tìm kiếm:"));
+        txtSearch = new JTextField(20); // Trường nhập từ khóa
+        searchPanel.add(txtSearch);
+
+        String[] types = {"Sản phẩm", "Khách hàng", "Hóa đơn"};
+        cbType = new JComboBox<>(types); // ComboBox chọn loại dữ liệu
+        searchPanel.add(cbType);
+
+        JButton btnSearch = new JButton("Tìm");
+        btnSearch.addActionListener(e -> timKiem()); // Gọi phương thức tìm kiếm khi nhấn
+        searchPanel.add(btnSearch);
+        add(searchPanel, BorderLayout.NORTH); // Thêm panel tìm kiếm vào phía bắc
+
+        // Tạo bảng hiển thị kết quả tìm kiếm
+        table = new JTable();
+        add(new JScrollPane(table), BorderLayout.CENTER); // Thêm bảng vào trung tâm giao diện
+
+        // Xử lý sự kiện nhấn chuột vào bảng để hiển thị chi tiết
+        table.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                int row = table.rowAtPoint(e.getPoint());
+                if (row != -1) {
+                    String type = cbType.getSelectedItem().toString();
+                    if (type.equals("Khách hàng")) {
+                        String maKH = (String) table.getValueAt(row, 0);
+                        hienThiChiTietKhachHang(maKH); // Hiển thị chi tiết khách hàng
+                    } else if (type.equals("Sản phẩm")) {
+                        String maSP = (String) table.getValueAt(row, 0);
+                        hienThiChiTietSanPham(maSP); // Hiển thị chi tiết sản phẩm
+                    } else if (type.equals("Hóa đơn")) {
+                        String maHD = (String) table.getValueAt(row, 0);
+                        hienThiChiTietHoaDon(maHD); // Hiển thị chi tiết hóa đơn
+                    }
+                }
+            }
+        });
+
+        timKiem(); // Hiển thị kết quả tìm kiếm mặc định khi khởi tạo
+    }
+
+    // Thực hiện tìm kiếm và cập nhật bảng kết quả
+    private void timKiem() {
+        String keyword = txtSearch.getText().trim().toLowerCase(); // Lấy từ khóa tìm kiếm
+        String type = cbType.getSelectedItem().toString(); // Lấy loại dữ liệu được chọn
+
+        if (type.equals("Sản phẩm")) {
+            // Tìm kiếm sản phẩm theo mã, tên hoặc hãng
+            String[] columns = {"Mã SP", "Tên", "Hãng", "Giá", "Số lượng", "Chip", "Số camera", "Pin (mAh)", "Màn hình (inch)"};
+            List<Object[]> dataList = new ArrayList<>();
+            for (SanPham sp : dsSanPham) {
+                if (sp.getMaSP().toLowerCase().contains(keyword) || 
+                    sp.getTen().toLowerCase().contains(keyword) || 
+                    sp.getHang().toLowerCase().contains(keyword)) {
+                    dataList.add(new Object[]{
+                        sp.getMaSP(), 
+                        sp.getTen(), 
+                        sp.getHang(), 
+                        formatPrice(sp.getGia()), 
+                        sp.getSoLuong(), 
+                        sp.getChip(), 
+                        sp.getSoCamera(), 
+                        sp.getDungLuongPin(), 
+                        sp.getKichThuocManHinh()
+                    }); // Thêm sản phẩm phù hợp vào danh sách
+                }
+            }
+            Object[][] data = dataList.toArray(new Object[0][]);
+            table.setModel(new javax.swing.table.DefaultTableModel(data, columns)); // Cập nhật bảng
+        } else if (type.equals("Khách hàng")) {
+            // Tìm kiếm khách hàng theo mã hoặc tên
+            String[] columns = {"Mã KH", "Tên KH", "SĐT"};
+            List<Object[]> dataList = new ArrayList<>();
+            for (KhachHang kh : dsKhachHang) {
+                if (kh.getMaKH().toLowerCase().contains(keyword) || 
+                    kh.getTenKH().toLowerCase().contains(keyword)) {
+                    dataList.add(new Object[]{kh.getMaKH(), kh.getTenKH(), kh.getSdt()}); // Thêm khách hàng phù hợp
+                }
+            }
+            Object[][] data = dataList.toArray(new Object[0][]);
+            table.setModel(new javax.swing.table.DefaultTableModel(data, columns)); // Cập nhật bảng
+        } else if (type.equals("Hóa đơn")) {
+            // Tìm kiếm hóa đơn theo mã hóa đơn, mã khách hàng hoặc mã sản phẩm
+            String[] columns = {"Mã HD", "Mã KH", "Mã SP", "Số lượng", "Tổng tiền", "Ngày lập"};
+            List<Object[]> dataList = new ArrayList<>();
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+            for (HoaDon hd : dsHoaDon) {
+                if (hd.getMaHD().toLowerCase().contains(keyword) || 
+                    hd.getMaKH().toLowerCase().contains(keyword) || 
+                    hd.getTenSP().toLowerCase().contains(keyword)) {
+                    dataList.add(new Object[]{
+                        hd.getMaHD(), 
+                        hd.getMaKH(), 
+                        hd.getTenSP(), 
+                        hd.getSoLuong(), 
+                        formatPrice(hd.getTongTien()), 
+                        hd.getNgayLap().format(formatter)
+                    }); // Thêm hóa đơn phù hợp
+                }
+            }
+            Object[][] data = dataList.toArray(new Object[0][]);
+            table.setModel(new javax.swing.table.DefaultTableModel(data, columns)); // Cập nhật bảng
+        }
+    }
+
+    // Hiển thị chi tiết thông tin khách hàng
+    private void hienThiChiTietKhachHang(String maKH) {
+        JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Chi tiết khách hàng", true);
+        dialog.setLayout(new BorderLayout());
+        dialog.setSize(600, 400);
+        dialog.setLocationRelativeTo(this);
+        dialog.getContentPane().setBackground(Color.decode("#F8EAD9"));
+
+        JPanel infoPanel = new JPanel(new GridLayout(4, 2, 5, 5));
+        infoPanel.setBackground(Color.decode("#F8EAD9"));
+        infoPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        KhachHang kh = dsKhachHang.stream()
+                .filter(k -> k.getMaKH().equals(maKH))
+                .findFirst()
+                .orElse(null);
+
+        infoPanel.add(new JLabel("Tóm tắt:"));
+        infoPanel.add(new JLabel(kh != null ? kh.getSummary() : "Không tìm thấy")); // Sử dụng getSummary
+
+        infoPanel.add(new JLabel("Mã KH:"));
+        infoPanel.add(new JLabel(maKH));
+
+        infoPanel.add(new JLabel("Tên KH:"));
+        infoPanel.add(new JLabel(kh != null ? kh.getTenKH() : "Không tìm thấy"));
+
+        infoPanel.add(new JLabel("SĐT:"));
+        infoPanel.add(new JLabel(kh != null ? kh.getSdt() : "Không tìm thấy"));
+
+        JPanel lichSuPanel = new JPanel(new BorderLayout());
+        lichSuPanel.setBackground(Color.decode("#F8EAD9"));
+        lichSuPanel.setBorder(BorderFactory.createTitledBorder("Lịch sử mua hàng"));
+
+        String[] columns = {"Mã HD", "Tên SP", "Số lượng", "Tổng tiền", "Ngày lập"};
+        List<Object[]> dataList = new ArrayList<>();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        for (HoaDon hd : dsHoaDon.stream().filter(h -> h.getMaKH().equals(maKH)).toList()) {
+            String tenSP = dsSanPham.stream()
+                    .filter(sp -> sp.getMaSP().equals(hd.getTenSP()))
+                    .findFirst()
+                    .map(SanPham::getTen)
+                    .orElse(hd.getTenSP());
+            dataList.add(new Object[]{
+                hd.getMaHD(),
+                tenSP,
+                hd.getSoLuong(),
+                formatPrice(hd.getTongTien()),
+                hd.getNgayLap().format(formatter)
+            });
+        }
+        Object[][] data = dataList.toArray(new Object[0][]);
+        JTable lichSuTable = new JTable(data, columns);
+        lichSuTable.setFillsViewportHeight(true);
+        JScrollPane lichSuScrollPane = new JScrollPane(lichSuTable);
+        lichSuPanel.add(lichSuScrollPane, BorderLayout.CENTER);
+
+        JPanel mainPanel = new JPanel(new BorderLayout());
+        mainPanel.setBackground(Color.decode("#F8EAD9"));
+        mainPanel.add(infoPanel, BorderLayout.NORTH);
+        mainPanel.add(lichSuPanel, BorderLayout.CENTER);
+        dialog.add(mainPanel, BorderLayout.CENTER);
+
+        JButton btnDong = new JButton("Đóng");
+        btnDong.addActionListener(e -> dialog.dispose());
+        JPanel buttonPanel = new JPanel(new FlowLayout());
+        buttonPanel.setBackground(Color.decode("#F8EAD9"));
+        buttonPanel.add(btnDong);
+        dialog.add(buttonPanel, BorderLayout.SOUTH);
+
+        dialog.setVisible(true);
+    }
+
+    // Hiển thị chi tiết thông tin sản phẩm
+    private void hienThiChiTietSanPham(String maSP) {
+        JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Chi tiết sản phẩm", true);
+        dialog.setLayout(new BorderLayout());
+        dialog.setSize(600, 300);
+        dialog.setLocationRelativeTo(this);
+        dialog.getContentPane().setBackground(Color.decode("#F8EAD9"));
+
+        JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
+        mainPanel.setBackground(Color.decode("#F8EAD9"));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        SanPham sp = dsSanPham.stream()
+                .filter(s -> s.getMaSP().equals(maSP))
+                .findFirst()
+                .orElse(null);
+
+        JPanel imagePanel = new JPanel();
+        imagePanel.setBackground(Color.decode("#F8EAD9"));
+        JLabel lblImage = new JLabel();
+        if (sp != null && sp.getHinhMinhHoa() != null && !sp.getHinhMinhHoa().isEmpty()) {
+            try {
+                ImageIcon icon = new ImageIcon(sp.getHinhMinhHoa());
+                Image scaledImage = icon.getImage().getScaledInstance(150, 150, Image.SCALE_SMOOTH);
+                lblImage.setIcon(new ImageIcon(scaledImage));
+            } catch (Exception e) {
+                lblImage.setText("Không tải được ảnh");
+            }
+        } else {
+            lblImage.setText("Không có ảnh");
+        }
+        imagePanel.add(lblImage);
+        mainPanel.add(imagePanel, BorderLayout.WEST);
+
+        JPanel infoPanel = new JPanel(new GridLayout(10, 2, 5, 5));
+        infoPanel.setBackground(Color.decode("#F8EAD9"));
+
+        infoPanel.add(new JLabel("Tóm tắt:"));
+        infoPanel.add(new JLabel(sp != null ? sp.getSummary() : "Không tìm thấy")); // Sử dụng getSummary
+
+        infoPanel.add(new JLabel("Mã SP:"));
+        infoPanel.add(new JLabel(maSP));
+
+        infoPanel.add(new JLabel("Tên SP:"));
+        infoPanel.add(new JLabel(sp != null ? sp.getTen() : "Không tìm thấy"));
+
+        infoPanel.add(new JLabel("Hãng:"));
+        infoPanel.add(new JLabel(sp != null ? sp.getHang() : "Không tìm thấy"));
+
+        infoPanel.add(new JLabel("Giá:"));
+        infoPanel.add(new JLabel(sp != null ? formatPrice(sp.getGia()) : "Không tìm thấy"));
+
+        infoPanel.add(new JLabel("Số lượng còn lại:"));
+        infoPanel.add(new JLabel(sp != null ? String.valueOf(sp.getSoLuong()) : "Không tìm thấy"));
+
+        infoPanel.add(new JLabel("Chip:"));
+        infoPanel.add(new JLabel(sp != null ? sp.getChip() : "Không tìm thấy"));
+
+        infoPanel.add(new JLabel("Số camera:"));
+        infoPanel.add(new JLabel(sp != null ? String.valueOf(sp.getSoCamera()) : "Không tìm thấy"));
+
+        infoPanel.add(new JLabel("Pin (mAh):"));
+        infoPanel.add(new JLabel(sp != null ? String.valueOf(sp.getDungLuongPin()) : "Không tìm thấy"));
+
+        infoPanel.add(new JLabel("Màn hình (inch):"));
+        infoPanel.add(new JLabel(sp != null ? String.valueOf(sp.getKichThuocManHinh()) : "Không tìm thấy"));
+
+        mainPanel.add(infoPanel, BorderLayout.CENTER);
+        dialog.add(mainPanel, BorderLayout.CENTER);
+
+        JButton btnDong = new JButton("Đóng");
+        btnDong.addActionListener(e -> dialog.dispose());
+        JPanel buttonPanel = new JPanel(new FlowLayout());
+        buttonPanel.setBackground(Color.decode("#F8EAD9"));
+        buttonPanel.add(btnDong);
+        dialog.add(buttonPanel, BorderLayout.SOUTH);
+
+        dialog.setVisible(true);
+    }
+
+    // Hiển thị chi tiết thông tin hóa đơn
+    private void hienThiChiTietHoaDon(String maHD) {
+        JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Chi tiết hóa đơn", true);
+        dialog.setLayout(new BorderLayout());
+        dialog.setSize(600, 400);
+        dialog.setLocationRelativeTo(this);
+        dialog.getContentPane().setBackground(Color.decode("#F8EAD9"));
+
+        JPanel infoPanel = new JPanel(new GridLayout(5, 2, 5, 5));
+        infoPanel.setBackground(Color.decode("#F8EAD9"));
+        infoPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        List<HoaDon> chiTietHD = dsHoaDon.stream()
+                .filter(h -> h.getMaHD().equals(maHD))
+                .collect(Collectors.toList());
+        String maKH = chiTietHD.isEmpty() ? "" : chiTietHD.get(0).getMaKH();
+        String tenKH = maKH;
+        try {
+            tenKH = dsKhachHang.stream()
+                    .filter(kh -> kh.getMaKH().equals(maKH))
+                    .findFirst()
+                    .map(KhachHang::getTenKH)
+                    .orElse(maKH);
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Lỗi khi đọc dữ liệu khách hàng: " + e.getMessage());
+        }
+
+        infoPanel.add(new JLabel("Tóm tắt:"));
+        infoPanel.add(new JLabel(chiTietHD.isEmpty() ? "Không có dữ liệu" : chiTietHD.get(0).getSummary())); // Sử dụng getSummary
+
+        infoPanel.add(new JLabel("Mã HD:"));
+        infoPanel.add(new JLabel(maHD));
+
+        infoPanel.add(new JLabel("Mã KH:"));
+        infoPanel.add(new JLabel(maKH));
+
+        infoPanel.add(new JLabel("Tên KH:"));
+        infoPanel.add(new JLabel(tenKH));
+
+        infoPanel.add(new JLabel("Ngày lập:"));
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        String ngayLap = chiTietHD.isEmpty() ? "" : chiTietHD.get(0).getNgayLap().format(formatter);
+        infoPanel.add(new JLabel(ngayLap));
+
+        JPanel spPanel = new JPanel(new BorderLayout());
+        spPanel.setBackground(Color.decode("#F8EAD9"));
+        spPanel.setBorder(BorderFactory.createTitledBorder("Danh sách sản phẩm"));
+
+        String[] columns = {"Tên SP", "Số lượng", "Giá", "Thành tiền"};
+        List<Object[]> dataList = new ArrayList<>();
+        double tongTien = 0;
+        for (HoaDon hd : chiTietHD) {
+            String tenSP = dsSanPham.stream()
+                    .filter(sp -> sp.getMaSP().equals(hd.getTenSP()))
+                    .findFirst()
+                    .map(SanPham::getTen)
+                    .orElse(hd.getTenSP());
+            double gia = dsSanPham.stream()
+                    .filter(sp -> sp.getMaSP().equals(hd.getTenSP()))
+                    .findFirst()
+                    .map(SanPham::getGia)
+                    .orElse(hd.getTongTien() / hd.getSoLuong());
+            tongTien += hd.getTongTien();
+            dataList.add(new Object[]{tenSP, hd.getSoLuong(), formatPrice(gia), formatPrice(hd.getTongTien())});
+        }
+        Object[][] data = dataList.toArray(new Object[0][]);
+        JTable spTable = new JTable(data, columns);
+        spTable.setFillsViewportHeight(true);
+        JScrollPane spScrollPane = new JScrollPane(spTable);
+        spPanel.add(spScrollPane, BorderLayout.CENTER);
+
+        JLabel lblTongTien = new JLabel("Tổng tiền: " + formatPrice(tongTien));
+        lblTongTien.setHorizontalAlignment(SwingConstants.RIGHT);
+        spPanel.add(lblTongTien, BorderLayout.SOUTH);
+
+        JPanel mainPanel = new JPanel(new BorderLayout());
+        mainPanel.setBackground(Color.decode("#F8EAD9"));
+        mainPanel.add(infoPanel, BorderLayout.NORTH);
+        mainPanel.add(spPanel, BorderLayout.CENTER);
+        dialog.add(mainPanel, BorderLayout.CENTER);
+
+        JButton btnDong = new JButton("Đóng");
+        btnDong.addActionListener(e -> dialog.dispose());
+        JPanel buttonPanel = new JPanel(new FlowLayout());
+        buttonPanel.setBackground(Color.decode("#F8EAD9"));
+        buttonPanel.add(btnDong);
+        dialog.add(buttonPanel, BorderLayout.SOUTH);
+
+        dialog.setVisible(true);
+    }
+}

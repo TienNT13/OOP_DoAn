@@ -1,0 +1,26 @@
+package do_an_1;
+
+import java.io.Serializable;
+
+public class KhachHang extends Entity implements Serializable {
+    private String tenKH;
+    private String sdt;
+
+    public KhachHang(String maKH, String tenKH, String sdt) {
+        super(maKH); // Gọi constructor của lớp cha Entity
+        this.tenKH = tenKH;
+        this.sdt = sdt;
+    }
+
+    public String getMaKH() { return id; }
+    public void setMaKH(String maKH) { this.id = maKH; }
+    public String getTenKH() { return tenKH; }
+    public void setTenKH(String tenKH) { this.tenKH = tenKH; }
+    public String getSdt() { return sdt; }
+    public void setSdt(String sdt) { this.sdt = sdt; }
+
+    @Override
+    public String getSummary() {
+        return String.format("Khách hàng: %s (%s), SĐT: %s", tenKH, id, sdt);
+    }
+}

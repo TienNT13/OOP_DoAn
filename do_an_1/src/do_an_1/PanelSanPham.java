@@ -6,7 +6,6 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.IOException;
-import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -14,44 +13,25 @@ import java.util.Set;
 import java.util.TreeSet;
 
 public class PanelSanPham extends JPanel {
-    private List<SanPham> dsSanPham; // Danh sách sản phẩm
-    private List<SanPham> filteredSanPham; // Danh sách sản phẩm sau khi lọc
-    private JTextField txtMaSP, txtTen, txtHang, txtGia, txtSoLuong, txtChip, txtSoCamera, txtDungLuongPin, txtKichThuocManHinh; // Các trường nhập liệu
-    private JTextField txtHinhMinhHoa; // Trường nhập đường dẫn hình ảnh
-    private JPanel formPanel; // Panel chứa form nhập liệu
-    private DataManager<SanPham> dataManager; // Quản lý lưu trữ sản phẩm
-    private DataManager<HoaDon> hoaDonDataManager; // Quản lý lưu trữ hóa đơn
-    private boolean isEditing = false; // Trạng thái chỉnh sửa sản phẩm
-    private JPanel productPanel; // Panel hiển thị danh sách sản phẩm dạng lưới
-    private JComboBox<String> hangComboBox; // ComboBox lọc theo hãng
-
-    // Định dạng giá tiền với dấu phẩy và đơn vị VND
-    private String formatPrice(double price) {
-        DecimalFormat formatter = new DecimalFormat("#,###");
-        return formatter.format(price) + " VND";
-    }
+    private ProductManager productManager;
+    private List<SanPham> filteredSanPham;
+    private JTextField txtMaSP, txtTen, txtHang, txtGia, txtSoLuong, txtChip, txtSoCamera, txtDungLuongPin, txtKichThuocManHinh;
+    private JTextField txtHinhMinhHoa;
+    private JPanel formPanel;
+    private DataManager<HoaDon> hoaDonDataManager;
+    private boolean isEditing = false;
+    private JPanel productPanel;
+    private JComboBox<String> hangComboBox;
 
     public PanelSanPham() {
-        // Thiết lập giao diện cơ bản cho panel
         setBackground(Color.decode("#F8EAD9"));
         setLayout(new BorderLayout());
         setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
 
-        // Khởi tạo các đối tượng quản lý dữ liệu
-        dataManager = new FileDataManager<>();
+        productManager = new ProductManager();
         hoaDonDataManager = new FileDataManager<>();
-        dsSanPham = new ArrayList<>();
-        filteredSanPham = new ArrayList<>();
+        filteredSanPham = new ArrayList<>(productManager.getDsSanPham());
 
-        // Tải danh sách sản phẩm từ file
-        try {
-            dsSanPham = dataManager.loadFromFile("sanpham.dat");
-            filteredSanPham.addAll(dsSanPham);
-        } catch (IOException | ClassNotFoundException e) {
-            JOptionPane.showMessageDialog(this, "Lỗi khi đọc file sản phẩm: " + e.getMessage());
-        }
-
-        // Tạo panel chứa các nút điều khiển
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
         buttonPanel.setBackground(Color.decode("#F8EAD9"));
         JButton btnShowForm = new JButton("Thêm sản phẩm");
@@ -59,7 +39,6 @@ public class PanelSanPham extends JPanel {
         JButton btnXoa = new JButton("Xóa sản phẩm");
         JButton btnSortByHang = new JButton("Sắp xếp theo hãng");
 
-        // Nút thêm sản phẩm: hiển thị form và tạo mã sản phẩm mới
         btnShowForm.setBackground(Color.decode("#659287"));
         btnShowForm.setForeground(Color.WHITE);
         btnShowForm.setFont(new Font("Arial", Font.BOLD, 12));
@@ -67,38 +46,34 @@ public class PanelSanPham extends JPanel {
         btnShowForm.addActionListener(e -> {
             formPanel.setVisible(true);
             clearForm();
-            txtMaSP.setText(generateMaSP());
+            txtMaSP.setText(productManager.generateMaSP());
             isEditing = false;
         });
 
-        // Nút sửa sản phẩm: mở dialog chọn sản phẩm để sửa
         btnSua.setBackground(Color.decode("#B1C29E"));
         btnSua.setForeground(Color.BLACK);
         btnSua.setFont(new Font("Arial", Font.BOLD, 12));
         btnSua.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
         btnSua.addActionListener(e -> showProductSelectionDialog());
 
-        // Nút xóa sản phẩm: mở dialog chọn sản phẩm để xóa
         btnXoa.setBackground(Color.decode("#A2D2DF"));
         btnXoa.setForeground(Color.WHITE);
         btnXoa.setFont(new Font("Arial", Font.BOLD, 12));
         btnXoa.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
         btnXoa.addActionListener(e -> showDeleteProductDialog());
 
-        // Nút sắp xếp theo hãng: sắp xếp danh sách và làm mới giao diện
         btnSortByHang.setBackground(Color.decode("#89A8B2"));
         btnSortByHang.setForeground(Color.WHITE);
         btnSortByHang.setFont(new Font("Arial", Font.BOLD, 12));
         btnSortByHang.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
         btnSortByHang.addActionListener(e -> {
-            sortByHang();
-            filteredSanPham = new ArrayList<>(dsSanPham);
+            productManager.sortByHang();
+            filteredSanPham = new ArrayList<>(productManager.getDsSanPham());
             refreshProductGrid();
             updateHangComboBox();
             JOptionPane.showMessageDialog(this, "Đã sắp xếp sản phẩm theo hãng!");
         });
 
-        // Tạo ComboBox lọc theo hãng
         JLabel lblLocHang = new JLabel("Lọc theo hãng: ");
         lblLocHang.setFont(new Font("Arial", Font.BOLD, 12));
         hangComboBox = new JComboBox<>();
@@ -110,7 +85,6 @@ public class PanelSanPham extends JPanel {
             refreshProductGrid();
         });
 
-        // Thêm các nút và ComboBox vào panel điều khiển
         buttonPanel.add(btnShowForm);
         buttonPanel.add(btnSua);
         buttonPanel.add(btnXoa);
@@ -119,7 +93,6 @@ public class PanelSanPham extends JPanel {
         buttonPanel.add(hangComboBox);
         add(buttonPanel, BorderLayout.NORTH);
 
-        // Tạo form nhập liệu
         formPanel = new JPanel(new GridLayout(11, 2, 5, 5));
         formPanel.setBackground(Color.decode("#FFF3E0"));
         formPanel.setBorder(BorderFactory.createCompoundBorder(
@@ -127,7 +100,6 @@ public class PanelSanPham extends JPanel {
             BorderFactory.createEmptyBorder(10, 10, 10, 10)
         ));
 
-        // Thêm các trường nhập liệu vào form
         formPanel.add(new JLabel("Mã SP:"));
         txtMaSP = new JTextField();
         txtMaSP.setBorder(BorderFactory.createLineBorder(Color.decode("#D3A875")));
@@ -174,7 +146,6 @@ public class PanelSanPham extends JPanel {
         txtKichThuocManHinh.setBorder(BorderFactory.createLineBorder(Color.decode("#D3A875")));
         formPanel.add(txtKichThuocManHinh);
 
-        // Thêm trường chọn hình minh họa
         formPanel.add(new JLabel("Hình minh họa:"));
         JPanel hinhPanel = new JPanel(new BorderLayout());
         hinhPanel.setBackground(Color.decode("#FFF3E0"));
@@ -189,14 +160,12 @@ public class PanelSanPham extends JPanel {
         hinhPanel.add(btnChonAnh, BorderLayout.EAST);
         formPanel.add(hinhPanel);
 
-        // Tạo panel chứa các nút điều khiển form
         JPanel formButtonPanel = new JPanel(new FlowLayout());
         formButtonPanel.setBackground(Color.decode("#FFF3E0"));
         JButton btnThem = new JButton("Xác nhận");
         JButton btnHuy = new JButton("Hủy");
         JButton btnThoat = new JButton("Thoát");
 
-        // Nút xác nhận: thêm hoặc sửa sản phẩm
         btnThem.setBackground(Color.decode("#FFB4A2"));
         btnThem.setForeground(Color.WHITE);
         btnThem.addActionListener(e -> {
@@ -207,7 +176,6 @@ public class PanelSanPham extends JPanel {
             }
         });
 
-        // Nút hủy: xóa form và ẩn
         btnHuy.setBackground(Color.decode("#E5989B"));
         btnHuy.setForeground(Color.WHITE);
         btnHuy.addActionListener(e -> {
@@ -216,7 +184,6 @@ public class PanelSanPham extends JPanel {
             isEditing = false;
         });
 
-        // Nút thoát: ẩn form
         btnThoat.setBackground(Color.decode("#E5989B"));
         btnThoat.setForeground(Color.WHITE);
         btnThoat.addActionListener(e -> {
@@ -231,50 +198,25 @@ public class PanelSanPham extends JPanel {
         formPanel.add(new JLabel(""));
         formPanel.add(formButtonPanel);
 
-        // Thêm form vào panel chính
         add(formPanel, BorderLayout.WEST);
         formPanel.setVisible(false);
 
-        // Tạo panel hiển thị sản phẩm dạng lưới với thanh trượt
         productPanel = new JPanel(new GridLayout(0, 5, 15, 15));
         productPanel.setBackground(Color.decode("#F8EAD9"));
         JScrollPane productScrollPane = new JScrollPane(productPanel);
         productScrollPane.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 0));
-        productScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED); // Bật thanh trượt dọc khi cần
-        productScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED); // Bật thanh trượt ngang khi cần
+        productScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        productScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         add(productScrollPane, BorderLayout.CENTER);
 
-        // Làm mới danh sách sản phẩm
         refreshProductGrid();
     }
 
-    // Tạo mã sản phẩm mới dựa trên mã lớn nhất hiện có
-    private String generateMaSP() {
-        int maxId = 0;
-        for (SanPham sp : dsSanPham) {
-            String maSP = sp.getMaSP();
-            if (maSP.startsWith("M")) {
-                try {
-                    int id = Integer.parseInt(maSP.substring(1));
-                    maxId = Math.max(maxId, id);
-                } catch (NumberFormatException ignored) {
-                }
-            }
-        }
-        return "M" + (maxId + 1);
-    }
-
-    // Sắp xếp danh sách sản phẩm theo hãng
-    private void sortByHang() {
-        dsSanPham.sort(Comparator.comparing(SanPham::getHang, String.CASE_INSENSITIVE_ORDER));
-    }
-
-    // Cập nhật danh sách hãng trong ComboBox
     private void updateHangComboBox() {
         hangComboBox.removeAllItems();
         hangComboBox.addItem("Tất cả");
         Set<String> hangSet = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
-        for (SanPham sp : dsSanPham) {
+        for (SanPham sp : productManager.getDsSanPham()) {
             hangSet.add(sp.getHang());
         }
         for (String hang : hangSet) {
@@ -282,13 +224,12 @@ public class PanelSanPham extends JPanel {
         }
     }
 
-    // Lọc danh sách sản phẩm theo hãng
     private void filterByHang(String hang) {
         filteredSanPham.clear();
         if (hang == null || hang.equals("Tất cả")) {
-            filteredSanPham.addAll(dsSanPham);
+            filteredSanPham.addAll(productManager.getDsSanPham());
         } else {
-            for (SanPham sp : dsSanPham) {
+            for (SanPham sp : productManager.getDsSanPham()) {
                 if (sp.getHang().equalsIgnoreCase(hang)) {
                     filteredSanPham.add(sp);
                 }
@@ -296,9 +237,8 @@ public class PanelSanPham extends JPanel {
         }
     }
 
-    // Hiển thị dialog để chọn sản phẩm cần sửa
     private void showProductSelectionDialog() {
-        if (dsSanPham.isEmpty()) {
+        if (productManager.getDsSanPham().isEmpty()) {
             JOptionPane.showMessageDialog(this, "Danh sách sản phẩm trống!");
             return;
         }
@@ -314,7 +254,7 @@ public class PanelSanPham extends JPanel {
         mainPanel.setBackground(Color.decode("#F8EAD9"));
 
         JComboBox<String> productComboBox = new JComboBox<>();
-        for (SanPham sp : dsSanPham) {
+        for (SanPham sp : productManager.getDsSanPham()) {
             productComboBox.addItem(sp.getTen() + " (" + sp.getMaSP() + ")");
         }
         mainPanel.add(productComboBox, BorderLayout.CENTER);
@@ -328,7 +268,7 @@ public class PanelSanPham extends JPanel {
         btnChon.addActionListener(e -> {
             int selectedIndex = productComboBox.getSelectedIndex();
             if (selectedIndex != -1) {
-                SanPham selectedProduct = dsSanPham.get(selectedIndex);
+                SanPham selectedProduct = productManager.getDsSanPham().get(selectedIndex);
                 chuanBiSuaSanPham(selectedProduct);
                 dialog.dispose();
             } else {
@@ -349,9 +289,8 @@ public class PanelSanPham extends JPanel {
         dialog.setVisible(true);
     }
 
-    // Hiển thị dialog để chọn sản phẩm cần xóa
     private void showDeleteProductDialog() {
-        if (dsSanPham.isEmpty()) {
+        if (productManager.getDsSanPham().isEmpty()) {
             JOptionPane.showMessageDialog(this, "Danh sách sản phẩm trống!");
             return;
         }
@@ -367,7 +306,7 @@ public class PanelSanPham extends JPanel {
         mainPanel.setBackground(Color.decode("#F8EAD9"));
 
         JComboBox<String> productComboBox = new JComboBox<>();
-        for (SanPham sp : dsSanPham) {
+        for (SanPham sp : productManager.getDsSanPham()) {
             productComboBox.addItem(sp.getTen() + " (" + sp.getMaSP() + ")");
         }
         mainPanel.add(productComboBox, BorderLayout.CENTER);
@@ -386,9 +325,8 @@ public class PanelSanPham extends JPanel {
                     "Xác nhận xóa", JOptionPane.YES_NO_OPTION);
                 if (confirm == JOptionPane.YES_OPTION) {
                     try {
-                        dsSanPham.remove(selectedIndex);
-                        dataManager.saveToFile(dsSanPham, "sanpham.dat");
-                        filteredSanPham = new ArrayList<>(dsSanPham);
+                        productManager.deleteSanPham(productManager.getDsSanPham().get(selectedIndex).getMaSP());
+                        filteredSanPham = new ArrayList<>(productManager.getDsSanPham());
                         updateHangComboBox();
                         refreshProductGrid();
                         JOptionPane.showMessageDialog(this, "Xóa sản phẩm thành công!");
@@ -415,7 +353,6 @@ public class PanelSanPham extends JPanel {
         dialog.setVisible(true);
     }
 
-    // Chuẩn bị dữ liệu để sửa sản phẩm
     private void chuanBiSuaSanPham(SanPham sp) {
         txtMaSP.setText(sp.getMaSP());
         txtTen.setText(sp.getTen());
@@ -431,21 +368,17 @@ public class PanelSanPham extends JPanel {
         isEditing = true;
     }
 
-    // Làm mới lưới hiển thị sản phẩm
     private void refreshProductGrid() {
         productPanel.removeAll();
-
-        // Tính số hàng cần hiển thị
         int soHang = Math.max(1, (int) Math.ceil(filteredSanPham.size() / 5.0));
-        int panelWidth = 150 * 5 + 15 * 4; // 150px mỗi ô, 15px khoảng cách
-        int panelHeight = soHang * (200 + 15); // 200px chiều cao ô, 15px khoảng cách
+        int panelWidth = 150 * 5 + 15 * 4;
+        int panelHeight = soHang * (200 + 15);
         productPanel.setPreferredSize(new Dimension(panelWidth, panelHeight));
         productPanel.setMaximumSize(new Dimension(panelWidth, panelHeight));
 
-        // Tạo giao diện cho từng sản phẩm
         for (int i = 0; i < filteredSanPham.size(); i++) {
             SanPham sp = filteredSanPham.get(i);
-            int index = dsSanPham.indexOf(sp);
+            int index = productManager.getDsSanPham().indexOf(sp);
 
             JPanel itemPanel = new JPanel(new BorderLayout(5, 5));
             itemPanel.setBackground(Color.WHITE);
@@ -460,7 +393,6 @@ public class PanelSanPham extends JPanel {
                 BorderFactory.createEmptyBorder(5, 5, 5, 5)
             ));
 
-            // Hiển thị hình minh họa
             JLabel lblHinh = new JLabel();
             lblHinh.setHorizontalAlignment(SwingConstants.CENTER);
             if (sp.getHinhMinhHoa() != null && !sp.getHinhMinhHoa().isEmpty()) {
@@ -476,7 +408,6 @@ public class PanelSanPham extends JPanel {
             }
             itemPanel.add(lblHinh, BorderLayout.NORTH);
 
-            // Hiển thị thông tin sản phẩm
             JPanel infoPanel = new JPanel();
             infoPanel.setBackground(Color.WHITE);
             infoPanel.setLayout(new BoxLayout(infoPanel, BoxLayout.Y_AXIS));
@@ -486,7 +417,7 @@ public class PanelSanPham extends JPanel {
             lblTen.setFont(new Font("Arial", Font.BOLD, 12));
             infoPanel.add(lblTen);
 
-            JLabel lblGia = new JLabel(formatPrice(sp.getGia()));
+            JLabel lblGia = new JLabel(productManager.formatPrice(sp.getGia()));
             lblGia.setAlignmentX(Component.CENTER_ALIGNMENT);
             lblGia.setForeground(Color.BLACK);
             lblGia.setFont(new Font("Arial", Font.BOLD, 12));
@@ -494,7 +425,6 @@ public class PanelSanPham extends JPanel {
 
             itemPanel.add(infoPanel, BorderLayout.CENTER);
 
-            // Thêm hiệu ứng hover và click
             itemPanel.addMouseListener(new MouseAdapter() {
                 @Override
                 public void mouseEntered(MouseEvent e) {
@@ -530,9 +460,8 @@ public class PanelSanPham extends JPanel {
         productPanel.repaint();
     }
 
-    // Hiển thị chi tiết sản phẩm trong dialog
     private void hienThiChiTietSanPham(int row) {
-        SanPham sp = dsSanPham.get(row);
+        SanPham sp = productManager.getDsSanPham().get(row);
 
         JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Chi tiết sản phẩm", true);
         dialog.setLayout(new BorderLayout());
@@ -581,7 +510,7 @@ public class PanelSanPham extends JPanel {
         detailPanel.add(new JLabel(sp.getHang()));
 
         detailPanel.add(new JLabel("Giá:"));
-        detailPanel.add(new JLabel(formatPrice(sp.getGia())));
+        detailPanel.add(new JLabel(productManager.formatPrice(sp.getGia())));
 
         detailPanel.add(new JLabel("Số lượng:"));
         detailPanel.add(new JLabel(String.valueOf(sp.getSoLuong())));
@@ -617,7 +546,6 @@ public class PanelSanPham extends JPanel {
         dialog.setVisible(true);
     }
 
-    // Mở dialog chọn hình ảnh
     private void chonAnh() {
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Image files", "jpg", "png", "jpeg"));
@@ -628,97 +556,7 @@ public class PanelSanPham extends JPanel {
         }
     }
 
-    // Thêm sản phẩm mới hoặc cộng dồn số lượng nếu trùng tên
     private void themSanPham() {
-        try {
-            String maSP = generateMaSP();
-            String ten = txtTen.getText().trim();
-            String hang = txtHang.getText().trim();
-            String giaStr = txtGia.getText().trim();
-            String soLuongStr = txtSoLuong.getText().trim();
-            String chip = txtChip.getText().trim();
-            String soCameraStr = txtSoCamera.getText().trim();
-            String dungLuongPinStr = txtDungLuongPin.getText().trim();
-            String kichThuocManHinhStr = txtKichThuocManHinh.getText().trim();
-            String hinhMinhHoa = txtHinhMinhHoa.getText().trim();
-
-            // Kiểm tra thông tin bắt buộc
-            if (ten.isEmpty() || hang.isEmpty() || chip.isEmpty()) {
-                throw new IllegalArgumentException("Vui lòng điền đầy đủ thông tin bắt buộc (Tên, Hãng, Chip)!");
-            }
-
-            // Kiểm tra các trường số
-            int gia = Integer.parseInt(giaStr);
-            int soLuong = Integer.parseInt(soLuongStr);
-            int soCamera = Integer.parseInt(soCameraStr);
-            int dungLuongPin = Integer.parseInt(dungLuongPinStr);
-            double kichThuocManHinh = Double.parseDouble(kichThuocManHinhStr);
-
-            // Kiểm tra số nguyên dương
-            if (gia <= 0 || soLuong <= 0 || soCamera <= 0 || dungLuongPin <= 0) {
-                throw new IllegalArgumentException("Giá, số lượng, số camera, dung lượng pin phải là số nguyên dương!");
-            }
-
-            // Kiểm tra kích thước màn hình dương
-            if (kichThuocManHinh <= 0) {
-                throw new IllegalArgumentException("Kích thước màn hình phải là số dương!");
-            }
-
-            // Kiểm tra sản phẩm trùng tên
-            SanPham existingProduct = dsSanPham.stream()
-                    .filter(sp -> sp.getTen().equalsIgnoreCase(ten))
-                    .findFirst()
-                    .orElse(null);
-
-            if (existingProduct != null) {
-                // Cộng dồn số lượng
-                existingProduct.setSoLuong(existingProduct.getSoLuong() + soLuong);
-                dataManager.saveToFile(dsSanPham, "sanpham.dat");
-                filteredSanPham = new ArrayList<>(dsSanPham);
-                updateHangComboBox();
-                refreshProductGrid();
-                formPanel.setVisible(false);
-                clearForm();
-                JOptionPane.showMessageDialog(this, "Sản phẩm trùng tên, đã cộng dồn số lượng!");
-                return;
-            }
-
-            // Tạo sản phẩm mới
-            SanPham sp = new SanPham(maSP, ten, hang, gia, soLuong, chip, soCamera, dungLuongPin, kichThuocManHinh);
-            sp.setHinhMinhHoa(hinhMinhHoa);
-            dsSanPham.add(sp);
-            dataManager.saveToFile(dsSanPham, "sanpham.dat");
-            filteredSanPham = new ArrayList<>(dsSanPham);
-            updateHangComboBox();
-            refreshProductGrid();
-            formPanel.setVisible(false);
-            clearForm();
-            JOptionPane.showMessageDialog(this, "Thêm sản phẩm thành công!");
-        } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(this, "Giá, số lượng, số camera, dung lượng pin phải là số nguyên, kích thước màn hình phải là số!");
-        } catch (IllegalArgumentException | IOException e) {
-            JOptionPane.showMessageDialog(this, e.getMessage());
-        }
-    }
-
-    // Sửa thông tin sản phẩm
-    private void suaSanPham() {
-        int selectedIndex = -1;
-        String selectedMaSP = txtMaSP.getText();
-
-        // Tìm sản phẩm cần sửa
-        for (int i = 0; i < dsSanPham.size(); i++) {
-            if (dsSanPham.get(i).getMaSP().equals(selectedMaSP)) {
-                selectedIndex = i;
-                break;
-            }
-        }
-
-        if (selectedIndex == -1) {
-            JOptionPane.showMessageDialog(this, "Không tìm thấy sản phẩm để sửa!");
-            return;
-        }
-
         try {
             String maSP = txtMaSP.getText().trim();
             String ten = txtTen.getText().trim();
@@ -731,43 +569,75 @@ public class PanelSanPham extends JPanel {
             String kichThuocManHinhStr = txtKichThuocManHinh.getText().trim();
             String hinhMinhHoa = txtHinhMinhHoa.getText().trim();
 
-            // Kiểm tra thông tin bắt buộc
-            if (maSP.isEmpty() || ten.isEmpty() || hang.isEmpty() || chip.isEmpty()) {
-                throw new IllegalArgumentException("Vui lòng điền đầy đủ thông tin bắt buộc (Mã SP, Tên, Hãng, Chip)!");
+            if (ten.isEmpty() || hang.isEmpty() || chip.isEmpty()) {
+                throw new IllegalArgumentException("Vui lòng điền đầy đủ thông tin bắt buộc (Tên, Hãng, Chip)!");
             }
 
-            // Kiểm tra các trường số
             int gia = Integer.parseInt(giaStr);
             int soLuong = Integer.parseInt(soLuongStr);
             int soCamera = Integer.parseInt(soCameraStr);
             int dungLuongPin = Integer.parseInt(dungLuongPinStr);
             double kichThuocManHinh = Double.parseDouble(kichThuocManHinhStr);
 
-            // Kiểm tra số nguyên dương
             if (gia <= 0 || soLuong <= 0 || soCamera <= 0 || dungLuongPin <= 0) {
                 throw new IllegalArgumentException("Giá, số lượng, số camera, dung lượng pin phải là số nguyên dương!");
             }
 
-            // Kiểm tra kích thước màn hình dương
             if (kichThuocManHinh <= 0) {
                 throw new IllegalArgumentException("Kích thước màn hình phải là số dương!");
             }
 
-            // Cập nhật thông tin sản phẩm
-            SanPham sp = dsSanPham.get(selectedIndex);
-            sp.setMaSP(maSP);
-            sp.setTen(ten);
-            sp.setHang(hang);
-            sp.setGia(gia);
-            sp.setSoLuong(soLuong);
-            sp.setChip(chip);
-            sp.setSoCamera(soCamera);
-            sp.setDungLuongPin(dungLuongPin);
-            sp.setKichThuocManHinh(kichThuocManHinh);
+            SanPham sp = new SanPham(maSP, ten, hang, gia, soLuong, chip, soCamera, dungLuongPin, kichThuocManHinh);
             sp.setHinhMinhHoa(hinhMinhHoa);
+            productManager.addSanPham(sp);
+            filteredSanPham = new ArrayList<>(productManager.getDsSanPham());
+            updateHangComboBox();
+            refreshProductGrid();
+            formPanel.setVisible(false);
+            clearForm();
+            JOptionPane.showMessageDialog(this, "Thêm sản phẩm thành công!");
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "Giá, số lượng, số camera, dung lượng pin phải là số nguyên, kích thước màn hình phải là số!");
+        } catch (IllegalArgumentException | IOException e) {
+            JOptionPane.showMessageDialog(this, e.getMessage());
+        }
+    }
 
-            dataManager.saveToFile(dsSanPham, "sanpham.dat");
-            filteredSanPham = new ArrayList<>(dsSanPham);
+    private void suaSanPham() {
+        try {
+            String maSP = txtMaSP.getText().trim();
+            String ten = txtTen.getText().trim();
+            String hang = txtHang.getText().trim();
+            String giaStr = txtGia.getText().trim();
+            String soLuongStr = txtSoLuong.getText().trim();
+            String chip = txtChip.getText().trim();
+            String soCameraStr = txtSoCamera.getText().trim();
+            String dungLuongPinStr = txtDungLuongPin.getText().trim();
+            String kichThuocManHinhStr = txtKichThuocManHinh.getText().trim();
+            String hinhMinhHoa = txtHinhMinhHoa.getText().trim();
+
+            if (maSP.isEmpty() || ten.isEmpty() || hang.isEmpty() || chip.isEmpty()) {
+                throw new IllegalArgumentException("Vui lòng điền đầy đủ thông tin bắt buộc (Mã SP, Tên, Hãng, Chip)!");
+            }
+
+            int gia = Integer.parseInt(giaStr);
+            int soLuong = Integer.parseInt(soLuongStr);
+            int soCamera = Integer.parseInt(soCameraStr);
+            int dungLuongPin = Integer.parseInt(dungLuongPinStr);
+            double kichThuocManHinh = Double.parseDouble(kichThuocManHinhStr);
+
+            if (gia <= 0 || soLuong <= 0 || soCamera <= 0 || dungLuongPin <= 0) {
+                throw new IllegalArgumentException("Giá, số lượng, số camera, dung lượng pin phải là số nguyên dương!");
+            }
+
+            if (kichThuocManHinh <= 0) {
+                throw new IllegalArgumentException("Kích thước màn hình phải là số dương!");
+            }
+
+            SanPham sp = new SanPham(maSP, ten, hang, gia, soLuong, chip, soCamera, dungLuongPin, kichThuocManHinh);
+            sp.setHinhMinhHoa(hinhMinhHoa);
+            productManager.updateSanPham(sp);
+            filteredSanPham = new ArrayList<>(productManager.getDsSanPham());
             updateHangComboBox();
             refreshProductGrid();
             formPanel.setVisible(false);
@@ -781,14 +651,13 @@ public class PanelSanPham extends JPanel {
         }
     }
 
-    // Lấy sản phẩm đang được chọn
     private SanPham getSelectedSanPham() {
         for (Component comp : productPanel.getComponents()) {
             if (comp instanceof JPanel) {
                 JPanel itemPanel = (JPanel) comp;
                 if (itemPanel.getBorder() == BorderFactory.createLineBorder(Color.BLUE)) {
                     JLabel lblTen = (JLabel) ((JPanel) itemPanel.getComponent(1)).getComponent(0);
-                    return dsSanPham.stream()
+                    return productManager.getDsSanPham().stream()
                             .filter(sp -> sp.getTen().equals(lblTen.getText()))
                             .findFirst()
                             .orElse(null);
@@ -798,7 +667,6 @@ public class PanelSanPham extends JPanel {
         return null;
     }
 
-    // Xóa trạng thái chọn sản phẩm
     private void clearSelection() {
         for (Component comp : productPanel.getComponents()) {
             if (comp instanceof JPanel) {
@@ -812,7 +680,6 @@ public class PanelSanPham extends JPanel {
         }
     }
 
-    // Tính tổng số lượng sản phẩm đã bán
     private int tinhSoLuongDaBan(String maSP) {
         try {
             List<HoaDon> dsHoaDon = hoaDonDataManager.loadFromFile("hoadon.dat");
@@ -825,7 +692,6 @@ public class PanelSanPham extends JPanel {
         }
     }
 
-    // Xóa dữ liệu trên form
     private void clearForm() {
         txtMaSP.setText("");
         txtTen.setText("");
