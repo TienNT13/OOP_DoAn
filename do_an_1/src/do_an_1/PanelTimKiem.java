@@ -10,30 +10,34 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class PanelTimKiem extends JPanel {
-    private List<SanPham> dsSanPham;
-    private List<KhachHang> dsKhachHang;
-    private List<HoaDon> dsHoaDon;
-    private JTable table;
-    private JTextField txtSearch;
-    private JComboBox<String> cbType;
-    private DataManager<SanPham> spDataManager;
-    private DataManager<KhachHang> khDataManager;
-    private DataManager<HoaDon> hdDataManager;
+    private List<SanPham> dsSanPham; // Danh sách sản phẩm
+    private List<KhachHang> dsKhachHang; // Danh sách khách hàng
+    private List<HoaDon> dsHoaDon; // Danh sách hóa đơn
+    private JTable table; // Bảng hiển thị kết quả tìm kiếm
+    private JTextField txtSearch; // Trường nhập từ khóa tìm kiếm
+    private JComboBox<String> cbType; // ComboBox chọn loại dữ liệu để tìm kiếm
+    private DataManager<SanPham> spDataManager; // Quản lý lưu trữ dữ liệu sản phẩm
+    private DataManager<KhachHang> khDataManager; // Quản lý lưu trữ dữ liệu khách hàng
+    private DataManager<HoaDon> hdDataManager; // Quản lý lưu trữ dữ liệu hóa đơn
 
+    // Định dạng giá tiền với dấu phẩy và đơn vị VND
     private String formatPrice(double price) {
         DecimalFormat formatter = new DecimalFormat("#,###");
         return formatter.format(price) + " VND";
     }
 
     public PanelTimKiem() {
+        // Khởi tạo các đối tượng quản lý dữ liệu
         spDataManager = new FileDataManager<>();
         khDataManager = new FileDataManager<>();
         hdDataManager = new FileDataManager<>();
 
+        // Khởi tạo danh sách dữ liệu
         dsSanPham = new ArrayList<>();
         dsKhachHang = new ArrayList<>();
         dsHoaDon = new ArrayList<>();
 
+        // Tải dữ liệu từ file
         try {
             dsSanPham = spDataManager.loadFromFile("sanpham.dat");
             dsKhachHang = khDataManager.loadFromFile("khachhang.dat");
@@ -42,32 +46,32 @@ public class PanelTimKiem extends JPanel {
             JOptionPane.showMessageDialog(this, "Lỗi khi đọc file: " + e.getMessage());
         }
 
+        // Thiết lập giao diện cơ bản cho panel
         setLayout(new BorderLayout());
-        setBackground(Color.decode("#F8EAD9"));
-        setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        setBackground(Color.decode("#F8EAD9")); // Đặt màu nền
+        setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10)); // Thêm viền trống
 
-        // Form tìm kiếm
+        // Tạo form tìm kiếm
         JPanel searchPanel = new JPanel(new FlowLayout());
         searchPanel.setBackground(Color.decode("#F8EAD9"));
         searchPanel.add(new JLabel("Tìm kiếm:"));
-        txtSearch = new JTextField(20);
+        txtSearch = new JTextField(20); // Trường nhập từ khóa
         searchPanel.add(txtSearch);
 
         String[] types = {"Sản phẩm", "Khách hàng", "Hóa đơn"};
-        cbType = new JComboBox<>(types);
+        cbType = new JComboBox<>(types); // ComboBox chọn loại dữ liệu
         searchPanel.add(cbType);
 
         JButton btnSearch = new JButton("Tìm");
-        btnSearch.addActionListener(e -> timKiem());
+        btnSearch.addActionListener(e -> timKiem()); // Gọi phương thức tìm kiếm khi nhấn
         searchPanel.add(btnSearch);
+        add(searchPanel, BorderLayout.NORTH); // Thêm panel tìm kiếm vào phía bắc
 
-        add(searchPanel, BorderLayout.NORTH);
-
-        // Bảng hiển thị kết quả
+        // Tạo bảng hiển thị kết quả tìm kiếm
         table = new JTable();
-        add(new JScrollPane(table), BorderLayout.CENTER);
+        add(new JScrollPane(table), BorderLayout.CENTER); // Thêm bảng vào trung tâm giao diện
 
-        // Sự kiện nhấn chuột vào bảng
+        // Xử lý sự kiện nhấn chuột vào bảng để hiển thị chi tiết
         table.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseClicked(java.awt.event.MouseEvent e) {
@@ -76,26 +80,28 @@ public class PanelTimKiem extends JPanel {
                     String type = cbType.getSelectedItem().toString();
                     if (type.equals("Khách hàng")) {
                         String maKH = (String) table.getValueAt(row, 0);
-                        hienThiChiTietKhachHang(maKH);
+                        hienThiChiTietKhachHang(maKH); // Hiển thị chi tiết khách hàng
                     } else if (type.equals("Sản phẩm")) {
                         String maSP = (String) table.getValueAt(row, 0);
-                        hienThiChiTietSanPham(maSP);
+                        hienThiChiTietSanPham(maSP); // Hiển thị chi tiết sản phẩm
                     } else if (type.equals("Hóa đơn")) {
                         String maHD = (String) table.getValueAt(row, 0);
-                        hienThiChiTietHoaDon(maHD);
+                        hienThiChiTietHoaDon(maHD); // Hiển thị chi tiết hóa đơn
                     }
                 }
             }
         });
 
-        timKiem(); // Hiển thị kết quả mặc định
+        timKiem(); // Hiển thị kết quả tìm kiếm mặc định khi khởi tạo
     }
 
+    // Thực hiện tìm kiếm và cập nhật bảng kết quả
     private void timKiem() {
-        String keyword = txtSearch.getText().trim().toLowerCase();
-        String type = cbType.getSelectedItem().toString();
+        String keyword = txtSearch.getText().trim().toLowerCase(); // Lấy từ khóa tìm kiếm
+        String type = cbType.getSelectedItem().toString(); // Lấy loại dữ liệu được chọn
 
         if (type.equals("Sản phẩm")) {
+            // Tìm kiếm sản phẩm theo mã, tên hoặc hãng
             String[] columns = {"Mã SP", "Tên", "Hãng", "Giá", "Số lượng", "Chip", "Số camera", "Pin (mAh)", "Màn hình (inch)"};
             List<Object[]> dataList = new ArrayList<>();
             for (SanPham sp : dsSanPham) {
@@ -112,23 +118,25 @@ public class PanelTimKiem extends JPanel {
                         sp.getSoCamera(), 
                         sp.getDungLuongPin(), 
                         sp.getKichThuocManHinh()
-                    });
+                    }); // Thêm sản phẩm phù hợp vào danh sách
                 }
             }
             Object[][] data = dataList.toArray(new Object[0][]);
-            table.setModel(new javax.swing.table.DefaultTableModel(data, columns));
+            table.setModel(new javax.swing.table.DefaultTableModel(data, columns)); // Cập nhật bảng
         } else if (type.equals("Khách hàng")) {
+            // Tìm kiếm khách hàng theo mã hoặc tên
             String[] columns = {"Mã KH", "Tên KH", "SĐT"};
             List<Object[]> dataList = new ArrayList<>();
             for (KhachHang kh : dsKhachHang) {
                 if (kh.getMaKH().toLowerCase().contains(keyword) || 
                     kh.getTenKH().toLowerCase().contains(keyword)) {
-                    dataList.add(new Object[]{kh.getMaKH(), kh.getTenKH(), kh.getSdt()});
+                    dataList.add(new Object[]{kh.getMaKH(), kh.getTenKH(), kh.getSdt()}); // Thêm khách hàng phù hợp
                 }
             }
             Object[][] data = dataList.toArray(new Object[0][]);
-            table.setModel(new javax.swing.table.DefaultTableModel(data, columns));
+            table.setModel(new javax.swing.table.DefaultTableModel(data, columns)); // Cập nhật bảng
         } else if (type.equals("Hóa đơn")) {
+            // Tìm kiếm hóa đơn theo mã hóa đơn, mã khách hàng hoặc mã sản phẩm
             String[] columns = {"Mã HD", "Mã KH", "Mã SP", "Số lượng", "Tổng tiền", "Ngày lập"};
             List<Object[]> dataList = new ArrayList<>();
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
@@ -143,31 +151,34 @@ public class PanelTimKiem extends JPanel {
                         hd.getSoLuong(), 
                         formatPrice(hd.getTongTien()), 
                         hd.getNgayLap().format(formatter)
-                    });
+                    }); // Thêm hóa đơn phù hợp
                 }
             }
             Object[][] data = dataList.toArray(new Object[0][]);
-            table.setModel(new javax.swing.table.DefaultTableModel(data, columns));
+            table.setModel(new javax.swing.table.DefaultTableModel(data, columns)); // Cập nhật bảng
         }
     }
 
+    // Hiển thị chi tiết thông tin khách hàng
     private void hienThiChiTietKhachHang(String maKH) {
         JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Chi tiết khách hàng", true);
         dialog.setLayout(new BorderLayout());
         dialog.setSize(600, 400);
         dialog.setLocationRelativeTo(this);
-        dialog.getContentPane().setBackground(Color.decode("#F8EAD9"));
+        dialog.getContentPane().setBackground(Color.decode("#F8EAD9")); // Đặt màu nền dialog
 
-        // Thông tin khách hàng
+        // Tạo panel thông tin khách hàng
         JPanel infoPanel = new JPanel(new GridLayout(3, 2, 5, 5));
         infoPanel.setBackground(Color.decode("#F8EAD9"));
         infoPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
+        // Tìm khách hàng theo mã
         KhachHang kh = dsKhachHang.stream()
                 .filter(k -> k.getMaKH().equals(maKH))
                 .findFirst()
                 .orElse(null);
 
+        // Hiển thị thông tin khách hàng
         infoPanel.add(new JLabel("Mã KH:"));
         infoPanel.add(new JLabel(maKH));
         infoPanel.add(new JLabel("Tên KH:"));
@@ -175,11 +186,12 @@ public class PanelTimKiem extends JPanel {
         infoPanel.add(new JLabel("SĐT:"));
         infoPanel.add(new JLabel(kh != null ? kh.getSdt() : "Không tìm thấy"));
 
-        // Lịch sử mua hàng
+        // Tạo panel lịch sử mua hàng
         JPanel lichSuPanel = new JPanel(new BorderLayout());
         lichSuPanel.setBackground(Color.decode("#F8EAD9"));
         lichSuPanel.setBorder(BorderFactory.createTitledBorder("Lịch sử mua hàng"));
 
+        // Tạo bảng lịch sử mua hàng
         String[] columns = {"Mã HD", "Tên SP", "Số lượng", "Tổng tiền", "Ngày lập"};
         List<Object[]> dataList = new ArrayList<>();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
@@ -188,14 +200,14 @@ public class PanelTimKiem extends JPanel {
                     .filter(sp -> sp.getMaSP().equals(hd.getTenSP()))
                     .findFirst()
                     .map(SanPham::getTen)
-                    .orElse(hd.getTenSP());
+                    .orElse(hd.getTenSP()); // Lấy tên sản phẩm
             dataList.add(new Object[]{
                 hd.getMaHD(), 
                 tenSP, 
                 hd.getSoLuong(), 
                 formatPrice(hd.getTongTien()), 
                 hd.getNgayLap().format(formatter)
-            });
+            }); // Thêm hóa đơn vào lịch sử
         }
         Object[][] data = dataList.toArray(new Object[0][]);
         JTable lichSuTable = new JTable(data, columns);
@@ -203,13 +215,14 @@ public class PanelTimKiem extends JPanel {
         JScrollPane lichSuScrollPane = new JScrollPane(lichSuTable);
         lichSuPanel.add(lichSuScrollPane, BorderLayout.CENTER);
 
+        // Tạo panel chính
         JPanel mainPanel = new JPanel(new BorderLayout());
         mainPanel.setBackground(Color.decode("#F8EAD9"));
         mainPanel.add(infoPanel, BorderLayout.NORTH);
         mainPanel.add(lichSuPanel, BorderLayout.CENTER);
-
         dialog.add(mainPanel, BorderLayout.CENTER);
 
+        // Tạo nút đóng dialog
         JButton btnDong = new JButton("Đóng");
         btnDong.addActionListener(e -> dialog.dispose());
         JPanel buttonPanel = new JPanel(new FlowLayout());
@@ -217,26 +230,29 @@ public class PanelTimKiem extends JPanel {
         buttonPanel.add(btnDong);
         dialog.add(buttonPanel, BorderLayout.SOUTH);
 
-        dialog.setVisible(true);
+        dialog.setVisible(true); // Hiển thị dialog
     }
 
+    // Hiển thị chi tiết thông tin sản phẩm
     private void hienThiChiTietSanPham(String maSP) {
         JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Chi tiết sản phẩm", true);
         dialog.setLayout(new BorderLayout());
         dialog.setSize(600, 300);
         dialog.setLocationRelativeTo(this);
-        dialog.getContentPane().setBackground(Color.decode("#F8EAD9"));
+        dialog.getContentPane().setBackground(Color.decode("#F8EAD9")); // Đặt màu nền dialog
 
+        // Tạo panel chính
         JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
         mainPanel.setBackground(Color.decode("#F8EAD9"));
         mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
+        // Tìm sản phẩm theo mã
         SanPham sp = dsSanPham.stream()
                 .filter(s -> s.getMaSP().equals(maSP))
                 .findFirst()
                 .orElse(null);
 
-        // Hiển thị hình ảnh
+        // Hiển thị hình ảnh sản phẩm
         JPanel imagePanel = new JPanel();
         imagePanel.setBackground(Color.decode("#F8EAD9"));
         JLabel lblImage = new JLabel();
@@ -244,7 +260,7 @@ public class PanelTimKiem extends JPanel {
             try {
                 ImageIcon icon = new ImageIcon(sp.getHinhMinhHoa());
                 Image scaledImage = icon.getImage().getScaledInstance(150, 150, Image.SCALE_SMOOTH);
-                lblImage.setIcon(new ImageIcon(scaledImage));
+                lblImage.setIcon(new ImageIcon(scaledImage)); // Hiển thị ảnh thu nhỏ
             } catch (Exception e) {
                 lblImage.setText("Không tải được ảnh");
             }
@@ -254,10 +270,11 @@ public class PanelTimKiem extends JPanel {
         imagePanel.add(lblImage);
         mainPanel.add(imagePanel, BorderLayout.WEST);
 
-        // Thông tin sản phẩm
+        // Tạo panel thông tin sản phẩm
         JPanel infoPanel = new JPanel(new GridLayout(9, 2, 5, 5));
         infoPanel.setBackground(Color.decode("#F8EAD9"));
 
+        // Hiển thị thông tin sản phẩm
         infoPanel.add(new JLabel("Mã SP:"));
         infoPanel.add(new JLabel(maSP));
         infoPanel.add(new JLabel("Tên SP:"));
@@ -278,9 +295,9 @@ public class PanelTimKiem extends JPanel {
         infoPanel.add(new JLabel(sp != null ? String.valueOf(sp.getKichThuocManHinh()) : "Không tìm thấy"));
 
         mainPanel.add(infoPanel, BorderLayout.CENTER);
-
         dialog.add(mainPanel, BorderLayout.CENTER);
 
+        // Tạo nút đóng dialog
         JButton btnDong = new JButton("Đóng");
         btnDong.addActionListener(e -> dialog.dispose());
         JPanel buttonPanel = new JPanel(new FlowLayout());
@@ -288,21 +305,23 @@ public class PanelTimKiem extends JPanel {
         buttonPanel.add(btnDong);
         dialog.add(buttonPanel, BorderLayout.SOUTH);
 
-        dialog.setVisible(true);
+        dialog.setVisible(true); // Hiển thị dialog
     }
 
+    // Hiển thị chi tiết thông tin hóa đơn
     private void hienThiChiTietHoaDon(String maHD) {
         JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Chi tiết hóa đơn", true);
         dialog.setLayout(new BorderLayout());
         dialog.setSize(600, 400);
         dialog.setLocationRelativeTo(this);
-        dialog.getContentPane().setBackground(Color.decode("#F8EAD9"));
+        dialog.getContentPane().setBackground(Color.decode("#F8EAD9")); // Đặt màu nền dialog
 
-        // Thông tin hóa đơn
+        // Tạo panel thông tin hóa đơn
         JPanel infoPanel = new JPanel(new GridLayout(4, 2, 5, 5));
         infoPanel.setBackground(Color.decode("#F8EAD9"));
         infoPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
+        // Tìm danh sách hóa đơn theo mã
         List<HoaDon> chiTietHD = dsHoaDon.stream()
                 .filter(h -> h.getMaHD().equals(maHD))
                 .collect(Collectors.toList());
@@ -313,11 +332,12 @@ public class PanelTimKiem extends JPanel {
                     .filter(kh -> kh.getMaKH().equals(maKH))
                     .findFirst()
                     .map(KhachHang::getTenKH)
-                    .orElse(maKH);
+                    .orElse(maKH); // Lấy tên khách hàng
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Lỗi khi đọc dữ liệu khách hàng: " + e.getMessage());
         }
 
+        // Hiển thị thông tin hóa đơn
         infoPanel.add(new JLabel("Mã HD:"));
         infoPanel.add(new JLabel(maHD));
         infoPanel.add(new JLabel("Mã KH:"));
@@ -329,11 +349,12 @@ public class PanelTimKiem extends JPanel {
         String ngayLap = chiTietHD.isEmpty() ? "" : chiTietHD.get(0).getNgayLap().format(formatter);
         infoPanel.add(new JLabel(ngayLap));
 
-        // Danh sách sản phẩm
+        // Tạo panel danh sách sản phẩm
         JPanel spPanel = new JPanel(new BorderLayout());
         spPanel.setBackground(Color.decode("#F8EAD9"));
         spPanel.setBorder(BorderFactory.createTitledBorder("Danh sách sản phẩm"));
 
+        // Tạo bảng danh sách sản phẩm
         String[] columns = {"Tên SP", "Số lượng", "Giá", "Thành tiền"};
         List<Object[]> dataList = new ArrayList<>();
         double tongTien = 0;
@@ -342,14 +363,14 @@ public class PanelTimKiem extends JPanel {
                     .filter(sp -> sp.getMaSP().equals(hd.getTenSP()))
                     .findFirst()
                     .map(SanPham::getTen)
-                    .orElse(hd.getTenSP());
+                    .orElse(hd.getTenSP()); // Lấy tên sản phẩm
             double gia = dsSanPham.stream()
                     .filter(sp -> sp.getMaSP().equals(hd.getTenSP()))
                     .findFirst()
                     .map(SanPham::getGia)
-                    .orElse(hd.getTongTien() / hd.getSoLuong());
+                    .orElse(hd.getTongTien() / hd.getSoLuong()); // Tính giá sản phẩm
             tongTien += hd.getTongTien();
-            dataList.add(new Object[]{tenSP, hd.getSoLuong(), formatPrice(gia), formatPrice(hd.getTongTien())});
+            dataList.add(new Object[]{tenSP, hd.getSoLuong(), formatPrice(gia), formatPrice(hd.getTongTien())}); // Thêm sản phẩm vào danh sách
         }
         Object[][] data = dataList.toArray(new Object[0][]);
         JTable spTable = new JTable(data, columns);
@@ -357,17 +378,19 @@ public class PanelTimKiem extends JPanel {
         JScrollPane spScrollPane = new JScrollPane(spTable);
         spPanel.add(spScrollPane, BorderLayout.CENTER);
 
+        // Hiển thị tổng tiền
         JLabel lblTongTien = new JLabel("Tổng tiền: " + formatPrice(tongTien));
         lblTongTien.setHorizontalAlignment(SwingConstants.RIGHT);
         spPanel.add(lblTongTien, BorderLayout.SOUTH);
 
+        // Tạo panel chính
         JPanel mainPanel = new JPanel(new BorderLayout());
         mainPanel.setBackground(Color.decode("#F8EAD9"));
         mainPanel.add(infoPanel, BorderLayout.NORTH);
         mainPanel.add(spPanel, BorderLayout.CENTER);
-
         dialog.add(mainPanel, BorderLayout.CENTER);
 
+        // Tạo nút đóng dialog
         JButton btnDong = new JButton("Đóng");
         btnDong.addActionListener(e -> dialog.dispose());
         JPanel buttonPanel = new JPanel(new FlowLayout());
@@ -375,6 +398,6 @@ public class PanelTimKiem extends JPanel {
         buttonPanel.add(btnDong);
         dialog.add(buttonPanel, BorderLayout.SOUTH);
 
-        dialog.setVisible(true);
+        dialog.setVisible(true); // Hiển thị dialog
     }
 }

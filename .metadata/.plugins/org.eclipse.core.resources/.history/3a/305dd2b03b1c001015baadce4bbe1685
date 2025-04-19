@@ -1,0 +1,36 @@
+package do_an_1;
+
+import javax.swing.*;
+import java.awt.*;
+
+public class WelcomePanel extends JPanel {
+    // Runnable để xử lý sự kiện khi nhấn nút "Bắt đầu"
+    private final Runnable startAction;
+
+    public WelcomePanel(Runnable startAction) {
+        this.startAction = startAction;
+
+        // Cấu hình giao diện panel chào mừng
+        setLayout(new BorderLayout());
+        setBackground(Color.decode("#F8EAD9")); // Màu nền panel
+
+        // Nhãn tiêu đề chào mừng
+        JLabel lblWelcome = new JLabel("Chào Mừng Đến Với Hệ Thống Quản Lý Cửa Hàng Điện Thoại", SwingConstants.CENTER);
+        lblWelcome.setFont(new Font("SansSerif", Font.BOLD, 24));
+        lblWelcome.setForeground(Color.decode("#D3A875")); // Màu chữ tiêu đề
+        add(lblWelcome, BorderLayout.CENTER);
+
+        // Nút "Bắt đầu"
+        JButton btnStart = new JButton("Bắt đầu");
+        btnStart.setFont(new Font("SansSerif", Font.BOLD, 16));
+        btnStart.setBackground(Color.decode("#D3A875")); // Màu nền nút
+        btnStart.setForeground(Color.WHITE); // Màu chữ nút
+        btnStart.addActionListener(e -> startAction.run()); // Gọi hành động khi nhấn nút
+
+        // Panel chứa nút để căn giữa
+        JPanel buttonPanel = new JPanel(new FlowLayout());
+        buttonPanel.setBackground(Color.decode("#F8EAD9"));
+        buttonPanel.add(btnStart);
+        add(buttonPanel, BorderLayout.SOUTH);
+    }
+}

@@ -1,0 +1,24 @@
+package do_an_1;
+
+import java.io.Serializable;
+
+public class KhachHang implements Serializable {
+    private String maKH; // Mã khách hàng duy nhất
+    private String tenKH; // Tên khách hàng
+    private String sdt; // Số điện thoại
+
+    // Constructor khởi tạo khách hàng
+    public KhachHang(String maKH, String tenKH, String sdt) {
+        this.maKH = maKH;
+        this.tenKH = tenKH;
+        this.sdt = sdt;
+    }
+
+    // Getters và setters
+    public String getMaKH() { return maKH; }
+    public void setMaKH(String maKH) { this.maKH = maKH; }
+    public String getTenKH() { return tenKH; }
+    public void setTenKH(String tenKH) { this.tenKH = tenKH; }
+    public String getSdt() { return sdt; }
+    public void setSdt(String sdt) { this.sdt = sdt; }
+}

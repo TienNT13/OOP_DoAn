@@ -11,34 +11,37 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class PanelKhachHang extends JPanel {
-    private List<KhachHang> dsKhachHang;
-    private JTable table;
-    private JTextField txtMaKH, txtTenKH, txtSdt;
-    private DataManager<KhachHang> dataManager;
-    private DataManager<HoaDon> hoaDonDataManager;
-    private boolean sapXepTangDan = true;
+    private List<KhachHang> dsKhachHang; // Danh sách khách hàng
+    private JTable table; // Bảng hiển thị danh sách khách hàng
+    private JTextField txtMaKH, txtTenKH, txtSdt; // Các trường nhập liệu
+    private DataManager<KhachHang> dataManager; // Quản lý lưu/đọc file khách hàng
+    private DataManager<HoaDon> hoaDonDataManager; // Quản lý lưu/đọc file hóa đơn
+    private boolean sapXepTangDan = true; // Trạng thái sắp xếp (tăng dần/giảm dần)
 
-    // Tạo mã khách hàng tự động theo mẫu NTx
     private String generateMaKH() {
+        // Tạo mã khách hàng tự động theo định dạng NTx
         int count = dsKhachHang.size() + 1;
         return "NT" + count;
     }
 
     public PanelKhachHang() {
+        // Thiết lập giao diện cơ bản với màu nền và layout
         setBackground(Color.decode("#F8EAD9"));
         setLayout(new BorderLayout());
         setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
+        // Khởi tạo DataManager và danh sách khách hàng
         dataManager = new FileDataManager<>();
         hoaDonDataManager = new FileDataManager<>();
         dsKhachHang = new ArrayList<>();
         try {
+            // Đọc danh sách khách hàng từ file
             dsKhachHang = dataManager.loadFromFile("khachhang.dat");
         } catch (IOException | ClassNotFoundException e) {
             JOptionPane.showMessageDialog(this, "Lỗi khi đọc file khách hàng: " + e.getMessage());
         }
 
-        // Bảng hiển thị khách hàng
+        // Khởi tạo bảng hiển thị khách hàng
         String[] columns = {"Mã KH", "Tên KH", "SĐT"};
         Object[][] data = new Object[dsKhachHang.size()][3];
         for (int i = 0; i < dsKhachHang.size(); i++) {
@@ -50,13 +53,13 @@ public class PanelKhachHang extends JPanel {
         JScrollPane tableScrollPane = new JScrollPane(table);
         add(tableScrollPane, BorderLayout.CENTER);
 
-        // Form nhập liệu và nút điều khiển
+        // Tạo form nhập liệu
         JPanel formPanel = new JPanel(new GridLayout(5, 2, 5, 5));
         formPanel.setBackground(Color.decode("#F8EAD9"));
 
         formPanel.add(new JLabel("Mã KH:"));
         txtMaKH = new JTextField(generateMaKH());
-        txtMaKH.setEditable(false);
+        txtMaKH.setEditable(false); // Không cho chỉnh sửa mã khách hàng
         formPanel.add(txtMaKH);
 
         formPanel.add(new JLabel("Tên KH:"));
@@ -67,24 +70,24 @@ public class PanelKhachHang extends JPanel {
         txtSdt = new JTextField();
         formPanel.add(txtSdt);
 
-        // Panel chứa các nút
+        // Tạo panel chứa các nút điều khiển
         JPanel buttonPanel = new JPanel(new FlowLayout());
         buttonPanel.setBackground(Color.decode("#F8EAD9"));
 
         JButton btnThem = new JButton("Thêm");
-        btnThem.addActionListener(e -> themKhachHang());
+        btnThem.addActionListener(e -> themKhachHang()); // Gắn sự kiện thêm khách hàng
         buttonPanel.add(btnThem);
 
         JButton btnSua = new JButton("Sửa");
-        btnSua.addActionListener(e -> suaKhachHang());
+        btnSua.addActionListener(e -> suaKhachHang()); // Gắn sự kiện sửa khách hàng
         buttonPanel.add(btnSua);
 
         JButton btnXoa = new JButton("Xóa");
-        btnXoa.addActionListener(e -> xoaKhachHang());
+        btnXoa.addActionListener(e -> xoaKhachHang()); // Gắn sự kiện xóa khách hàng
         buttonPanel.add(btnXoa);
 
         JButton btnSapXep = new JButton("Sắp xếp theo mã KH");
-        btnSapXep.addActionListener(e -> sapXepKhachHang());
+        btnSapXep.addActionListener(e -> sapXepKhachHang()); // Gắn sự kiện sắp xếp
         buttonPanel.add(btnSapXep);
 
         formPanel.add(new JLabel(""));
@@ -92,7 +95,7 @@ public class PanelKhachHang extends JPanel {
 
         add(formPanel, BorderLayout.NORTH);
 
-        // Sự kiện chọn hàng trong bảng
+        // Xử lý sự kiện chọn hàng trong bảng để điền thông tin vào form
         table.getSelectionModel().addListSelectionListener(e -> {
             int row = table.getSelectedRow();
             if (row != -1 && !e.getValueIsAdjusting()) {
@@ -103,7 +106,7 @@ public class PanelKhachHang extends JPanel {
             }
         });
 
-        // Sự kiện nhấn chuột để hiển thị chi tiết
+        // Xử lý sự kiện click chuột để hiển thị chi tiết khách hàng
         table.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseClicked(java.awt.event.MouseEvent e) {
@@ -116,16 +119,16 @@ public class PanelKhachHang extends JPanel {
     }
 
     private void hienThiChiTietKhachHang(int row) {
+        // Hiển thị dialog chi tiết thông tin khách hàng và lịch sử mua hàng
         KhachHang kh = dsKhachHang.get(row);
 
-        // Tạo cửa sổ chi tiết
         JDialog dialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Chi tiết khách hàng", true);
         dialog.setLayout(new BorderLayout());
         dialog.setSize(600, 400);
         dialog.setLocationRelativeTo(this);
         dialog.getContentPane().setBackground(Color.decode("#F8EAD9"));
 
-        // Panel thông tin cơ bản
+        // Panel hiển thị thông tin cơ bản
         JPanel infoPanel = new JPanel(new GridLayout(3, 2, 5, 5));
         infoPanel.setBackground(Color.decode("#F8EAD9"));
         infoPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
@@ -139,13 +142,14 @@ public class PanelKhachHang extends JPanel {
         infoPanel.add(new JLabel("SĐT:"));
         infoPanel.add(new JLabel(kh.getSdt()));
 
-        // Panel lịch sử mua hàng
+        // Panel hiển thị lịch sử mua hàng
         JPanel historyPanel = new JPanel(new BorderLayout());
         historyPanel.setBackground(Color.decode("#F8EAD9"));
         historyPanel.setBorder(BorderFactory.createTitledBorder("Lịch sử mua hàng"));
 
         List<HoaDon> lichSuMuaHang;
         try {
+            // Lọc danh sách hóa đơn theo mã khách hàng
             lichSuMuaHang = hoaDonDataManager.loadFromFile("hoadon.dat").stream()
                     .filter(hd -> hd.getMaKH().equals(kh.getMaKH()))
                     .collect(Collectors.toList());
@@ -168,7 +172,7 @@ public class PanelKhachHang extends JPanel {
         JScrollPane historyScrollPane = new JScrollPane(historyTable);
         historyPanel.add(historyScrollPane, BorderLayout.CENTER);
 
-        // Thêm các panel vào dialog
+        // Tạo panel chính để chứa thông tin và lịch sử
         JPanel mainPanel = new JPanel(new BorderLayout());
         mainPanel.setBackground(Color.decode("#F8EAD9"));
         mainPanel.add(infoPanel, BorderLayout.NORTH);
@@ -176,7 +180,7 @@ public class PanelKhachHang extends JPanel {
 
         dialog.add(mainPanel, BorderLayout.CENTER);
 
-        // Nút đóng
+        // Thêm nút đóng dialog
         JButton btnDong = new JButton("Đóng");
         btnDong.addActionListener(e -> dialog.dispose());
         JPanel buttonPanel = new JPanel(new FlowLayout());
@@ -188,16 +192,18 @@ public class PanelKhachHang extends JPanel {
     }
 
     private void themKhachHang() {
+        // Thêm khách hàng mới vào danh sách
         try {
             String maKH = txtMaKH.getText().trim();
             String tenKH = txtTenKH.getText().trim();
             String sdt = txtSdt.getText().trim();
 
+            // Kiểm tra dữ liệu đầu vào
             if (tenKH.isEmpty() || sdt.isEmpty()) {
                 throw new IllegalArgumentException("Vui lòng điền đầy đủ thông tin!");
             }
 
-            // Kiểm tra trùng tên KH hoặc SĐT
+            // Kiểm tra trùng tên hoặc số điện thoại
             String finalTenKH = tenKH.toLowerCase();
             String finalSdt = sdt.replaceAll("\\s+", "");
             boolean isDuplicate = dsKhachHang.stream()
@@ -207,6 +213,7 @@ public class PanelKhachHang extends JPanel {
                 throw new IllegalArgumentException("Khách hàng đã tồn tại!");
             }
 
+            // Tạo và thêm khách hàng mới
             KhachHang kh = new KhachHang(maKH, tenKH, sdt);
             dsKhachHang.add(kh);
             dataManager.saveToFile(dsKhachHang, "khachhang.dat");
@@ -220,6 +227,7 @@ public class PanelKhachHang extends JPanel {
     }
 
     private void suaKhachHang() {
+        // Sửa thông tin khách hàng đã chọn
         int row = table.getSelectedRow();
         if (row == -1) {
             JOptionPane.showMessageDialog(this, "Vui lòng chọn khách hàng để sửa!");
@@ -230,11 +238,12 @@ public class PanelKhachHang extends JPanel {
             String tenKH = txtTenKH.getText().trim();
             String sdt = txtSdt.getText().trim();
 
+            // Kiểm tra dữ liệu đầu vào
             if (tenKH.isEmpty() || sdt.isEmpty()) {
                 throw new IllegalArgumentException("Vui lòng điền đầy đủ thông tin!");
             }
 
-            // Kiểm tra trùng tên KH hoặc SĐT với khách hàng khác
+            // Kiểm tra trùng tên hoặc số điện thoại với khách hàng khác
             String finalTenKH = tenKH.toLowerCase();
             String finalSdt = sdt.replaceAll("\\s+", "");
             KhachHang currentKH = dsKhachHang.get(row);
@@ -246,9 +255,11 @@ public class PanelKhachHang extends JPanel {
                 throw new IllegalArgumentException("Khách hàng đã tồn tại!");
             }
 
+            // Cập nhật thông tin khách hàng
             currentKH.setTenKH(tenKH);
             currentKH.setSdt(sdt);
 
+            // Lưu danh sách khách hàng vào file
             dataManager.saveToFile(dsKhachHang, "khachhang.dat");
             refreshTable();
             clearForm();
@@ -260,16 +271,19 @@ public class PanelKhachHang extends JPanel {
     }
 
     private void xoaKhachHang() {
+        // Xóa khách hàng đã chọn
         int row = table.getSelectedRow();
         if (row == -1) {
             JOptionPane.showMessageDialog(this, "Vui lòng chọn khách hàng để xóa!");
             return;
         }
 
+        // Xác nhận trước khi xóa
         int confirm = JOptionPane.showConfirmDialog(this, "Bạn có chắc muốn xóa khách hàng này?", "Xác nhận xóa", JOptionPane.YES_NO_OPTION);
         if (confirm == JOptionPane.YES_OPTION) {
             try {
                 dsKhachHang.remove(row);
+                // Lưu danh sách khách hàng sau khi xóa
                 dataManager.saveToFile(dsKhachHang, "khachhang.dat");
                 refreshTable();
                 clearForm();
@@ -282,13 +296,15 @@ public class PanelKhachHang extends JPanel {
     }
 
     private void sapXepKhachHang() {
+        // Sắp xếp danh sách khách hàng theo mã KH
         dsKhachHang.sort(Comparator.comparing(KhachHang::getMaKH, sapXepTangDan ? String::compareTo : Comparator.reverseOrder()));
-        sapXepTangDan = !sapXepTangDan;
+        sapXepTangDan = !sapXepTangDan; // Đảo trạng thái sắp xếp
         refreshTable();
         JOptionPane.showMessageDialog(this, "Đã sắp xếp khách hàng theo mã " + (sapXepTangDan ? "giảm dần" : "tăng dần") + "!");
     }
 
     private void refreshTable() {
+        // Làm mới bảng hiển thị danh sách khách hàng
         String[] columns = {"Mã KH", "Tên KH", "SĐT"};
         Object[][] data = new Object[dsKhachHang.size()][3];
         for (int i = 0; i < dsKhachHang.size(); i++) {
@@ -301,6 +317,7 @@ public class PanelKhachHang extends JPanel {
     }
 
     private void clearForm() {
+        // Xóa dữ liệu trong form nhập liệu
         txtMaKH.setText(generateMaKH());
         txtTenKH.setText("");
         txtSdt.setText("");

@@ -1,0 +1,37 @@
+package do_an_1;
+
+import java.io.Serializable;
+import java.time.LocalDate;
+
+public class HoaDon implements Serializable {
+    private String maHD; // Mã hóa đơn duy nhất
+    private String maKH; // Mã khách hàng
+    private String maSP; // Mã sản phẩm
+    private int soLuong; // Số lượng sản phẩm
+    private double tongTien; // Tổng tiền hóa đơn
+    private LocalDate ngayLap; // Ngày lập hóa đơn
+
+    // Constructor khởi tạo hóa đơn
+    public HoaDon(String maHD, String maKH, String maSP, int soLuong, double tongTien, LocalDate ngayLap) {
+        this.maHD = maHD;
+        this.maKH = maKH;
+        this.maSP = maSP;
+        this.soLuong = soLuong;
+        this.tongTien = tongTien;
+        this.ngayLap = ngayLap;
+    }
+
+    // Getters và setters
+    public String getMaHD() { return maHD; }
+    public void setMaHD(String maHD) { this.maHD = maHD; }
+    public String getMaKH() { return maKH; }
+    public void setMaKH(String maKH) { this.maKH = maKH; }
+    public String getTenSP() { return maSP; } // Trả về mã sản phẩm (sử dụng như tên SP trong một số trường hợp)
+    public void setMaSP(String maSP) { this.maSP = maSP; }
+    public int getSoLuong() { return soLuong; }
+    public void setSoLuong(int soLuong) { this.soLuong = soLuong; }
+    public double getTongTien() { return tongTien; }
+    public void setTongTien(double tongTien) { this.tongTien = tongTien; }
+    public LocalDate getNgayLap() { return ngayLap; }
+    public void setNgayLap(LocalDate ngayLap) { this.ngayLap = ngayLap; }
+}

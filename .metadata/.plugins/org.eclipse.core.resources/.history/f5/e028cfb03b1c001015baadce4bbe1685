@@ -1,0 +1,122 @@
+package do_an_1;
+
+import javax.swing.*;
+import java.awt.*;
+import java.io.IOException;
+import java.text.DecimalFormat;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+public class PanelThongKe extends JPanel {
+    private List<HoaDon> dsHoaDon; // Danh sách hóa đơn
+    private JLabel lblTongDoanhThu, lblTopSanPham; // Nhãn hiển thị tổng doanh thu và sản phẩm bán chạy
+    private JTable table; // Bảng hiển thị chi tiết hóa đơn
+    private DataManager<HoaDon> dataManager;
+
+    // Định dạng giá tiền
+    private String formatPrice(double price) {
+        DecimalFormat formatter = new DecimalFormat("#,###");
+        return formatter.format(price) + " VND";
+    }
+
+    public PanelThongKe() {
+        // Khởi tạo danh sách và đối tượng quản lý dữ liệu
+        dataManager = new FileDataManager<>();
+        dsHoaDon = new ArrayList<>();
+        try {
+            dsHoaDon = dataManager.loadFromFile("hoadon.dat"); // Đọc danh sách hóa đơn từ file
+        } catch (IOException | ClassNotFoundException e) {
+            JOptionPane.showMessageDialog(this, "Lỗi khi đọc file hóa đơn: " + e.getMessage());
+        }
+
+        // Cấu hình giao diện
+        setLayout(new BorderLayout());
+        setBackground(Color.decode("#F8EAD9")); // Màu nền panel
+        setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        // Tính tổng doanh thu
+        double tongDoanhThu = 0;
+        for (HoaDon hd : dsHoaDon) {
+            tongDoanhThu += hd.getTongTien();
+        }
+
+        // Tính sản phẩm bán chạy nhất
+        Map<String, Integer> productSales = new HashMap<>();
+        for (HoaDon hd : dsHoaDon) {
+            // Cộng dồn số lượng bán của từng sản phẩm
+            productSales.merge(hd.getTenSP(), hd.getSoLuong(), Integer::sum);
+        }
+        String topSanPham = productSales.entrySet().stream()
+                .max(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey)
+                .orElse("Chưa có dữ liệu");
+
+        // Panel hiển thị tổng doanh thu và sản phẩm bán chạy
+        JPanel topPanel = new JPanel(new GridLayout(2, 1));
+        lblTongDoanhThu = new JLabel("Tổng doanh thu: " + formatPrice(tongDoanhThu), SwingConstants.CENTER);
+        lblTongDoanhThu.setFont(new Font("SansSerif", Font.BOLD, 16));
+        topPanel.add(lblTongDoanhThu);
+
+        lblTopSanPham = new JLabel("Sản phẩm bán chạy: " + topSanPham, SwingConstants.CENTER);
+        lblTopSanPham.setFont(new Font("SansSerif", Font.BOLD, 16));
+        topPanel.add(lblTopSanPham);
+
+        // Bảng hiển thị chi tiết hóa đơn
+        String[] columns = {"Mã HD", "Mã SP", "Số lượng", "Tổng tiền", "Ngày lập"};
+        Object[][] data = new Object[dsHoaDon.size()][5];
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        for (int i = 0; i < dsHoaDon.size(); i++) {
+            HoaDon hd = dsHoaDon.get(i);
+            data[i] = new Object[]{hd.getMaHD(), hd.getTenSP(), hd.getSoLuong(), formatPrice(hd.getTongTien()), hd.getNgayLap().format(formatter)};
+        }
+        table = new JTable(data, columns);
+
+        // Nút làm mới
+        JButton btnRefresh = new JButton("Làm mới");
+        btnRefresh.addActionListener(e -> refresh()); // Cập nhật thống kê và bảng
+
+        // Thêm các thành phần vào panel
+        add(topPanel, BorderLayout.NORTH);
+        add(new JScrollPane(table), BorderLayout.CENTER);
+        add(btnRefresh, BorderLayout.SOUTH);
+    }
+
+    private void refresh() {
+        try {
+            // Đọc danh sách hóa đơn từ file
+            dsHoaDon = dataManager.loadFromFile("hoadon.dat");
+            // Tính tổng doanh thu
+            double tongDoanhThu = 0;
+            for (HoaDon hd : dsHoaDon) {
+                tongDoanhThu += hd.getTongTien();
+            }
+            lblTongDoanhThu.setText("Tổng doanh thu: " + formatPrice(tongDoanhThu));
+
+            // Tính sản phẩm bán chạy nhất
+            Map<String, Integer> productSales = new HashMap<>();
+            for (HoaDon hd : dsHoaDon) {
+                productSales.merge(hd.getTenSP(), hd.getSoLuong(), Integer::sum);
+            }
+            String topSanPham = productSales.entrySet().stream()
+                    .max(Map.Entry.comparingByValue())
+                    .map(Map.Entry::getKey)
+                    .orElse("Chưa có dữ liệu");
+            lblTopSanPham.setText("Sản phẩm bán chạy: " + topSanPham);
+
+            // Cập nhật bảng hiển thị danh sách hóa đơn
+            String[] columns = {"Mã HD", "Mã SP", "Số lượng", "Tổng tiền", "Ngày lập"};
+            Object[][] data = new Object[dsHoaDon.size()][5];
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+            for (int i = 0; i < dsHoaDon.size(); i++) {
+                HoaDon hd = dsHoaDon.get(i);
+                data[i] = new Object[]{hd.getMaHD(), hd.getTenSP(), hd.getSoLuong(), formatPrice(hd.getTongTien()), hd.getNgayLap().format(formatter)};
+            }
+            table.setModel(new javax.swing.table.DefaultTableModel(data, columns));
+        } catch (IOException | ClassNotFoundException e) {
+            JOptionPane.showMessageDialog(this, "Lỗi khi đọc file hóa đơn: " + e.getMessage());
+        }
+    }
+}
