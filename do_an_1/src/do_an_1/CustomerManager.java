@@ -18,6 +18,10 @@ public class CustomerManager {
             // Xử lý lỗi khi đọc file
         }
     }
+    
+    public void loadFromFile() throws IOException, ClassNotFoundException {
+        dsKhachHang = dataManager.loadFromFile("khachhang.dat");
+    }
 
     public List<KhachHang> getDsKhachHang() {
         return dsKhachHang;

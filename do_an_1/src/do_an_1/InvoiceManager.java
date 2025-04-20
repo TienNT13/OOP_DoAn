@@ -19,6 +19,10 @@ public class InvoiceManager {
             // Xử lý lỗi khi đọc file
         }
     }
+    
+    public void loadFromFile() throws IOException, ClassNotFoundException {
+        dsHoaDon = dataManager.loadFromFile("hoadon.dat");
+    }
 
     public List<HoaDon> getDsHoaDon() {
         return dsHoaDon;

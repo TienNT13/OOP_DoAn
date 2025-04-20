@@ -368,7 +368,7 @@ public class PanelSanPham extends JPanel {
         isEditing = true;
     }
 
-    private void refreshProductGrid() {
+    public void refreshProductGrid() {
         productPanel.removeAll();
         int soHang = Math.max(1, (int) Math.ceil(filteredSanPham.size() / 5.0));
         int panelWidth = 150 * 5 + 15 * 4;

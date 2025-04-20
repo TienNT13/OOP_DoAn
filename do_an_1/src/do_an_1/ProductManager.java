@@ -19,6 +19,10 @@ public class ProductManager {
             // Xử lý lỗi khi đọc file
         }
     }
+    
+    public void loadFromFile() throws IOException, ClassNotFoundException {
+        dsSanPham = dataManager.loadFromFile("sanpham.dat");
+    }
 
     public List<SanPham> getDsSanPham() {
         return dsSanPham;
